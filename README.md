@@ -33,7 +33,7 @@ Self-Driving Car Engineer Nanodegree Program
 2. Be sure while installing vcpkg to carefully follow all instructions! This is NOT an easy install process.
 3. Install python 2.7 (dependency for libuv) 
 4. cd to directory with vcpkg .exe and `./vcpkg install uWebsockets` (20 min, mostly automatic)
-5. Open CMakeSetting.json, check if `C:/vcpkg/scripts/buildsystems/vcpkg.cmake` is the correct directory to your vcpkg.
+5. Open CMakeSetting.json, check if `C:/vcpkg/scripts/buildsystems/vcpkg.cmake` is the correct directory to your vcpkg and `DCMAKE_TOOLCHAIN_FILE` matches the output from vcpkg integrate.
 6. Open in VS17 community edition, build pid.exe in x86 debug.
 
 
