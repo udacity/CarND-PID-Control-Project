@@ -25,7 +25,17 @@ Self-Driving Car Engineer Nanodegree Program
 1. Clone this repo.
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./pid`. 
+4. Run it: `./pid`.
+
+## Windows Install Instructions 
+
+1. Install, in your root `c:/` directory, vcpkg https://github.com/Microsoft/vcpkg   (15 - 30 minutes)
+2. Be sure while installing vcpkg to carefully follow all instructions! This is NOT an easy install process.
+3. Install python 2.7 (dependency for libuv) 
+4. cd to directory with vcpkg .exe and `./vcpkg install uWebsockets` (20 min, mostly automatic)
+5. Open CMakeSetting.json, check if `C:/vcpkg/scripts/buildsystems/vcpkg.cmake` is the correct directory to your vcpkg.
+6. Open in VS17 community edition, build pid.exe in x86 debug.
+
 
 ## Editor Settings
 
