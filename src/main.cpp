@@ -32,12 +32,12 @@ void read_args(int argc, char* argv[], double& Kp, double& Ki, double& Kd, doubl
   switch (auto ch = tolower(argv[i++][0])) {
   case 'y':
   case 't':
-	  twiddle = true;
-	  if (!twiddle) return;
-	  if (argc > i) dKp = atof(argv[i++]);
-	  if (argc > i) dKi = atof(argv[i++]);
-	  if (argc > i) dKd = atof(argv[i++]);
-	  if (argc > i) tolerance = atoi(argv[i++]);
+    twiddle = true;
+    if (!twiddle) return;
+    if (argc > i) dKp = atof(argv[i++]);
+    if (argc > i) dKi = atof(argv[i++]);
+    if (argc > i) dKd = atof(argv[i++]);
+    if (argc > i) tolerance = atoi(argv[i++]);
   case 'a':
     adaptiveThrottle = true;
     if (argc > i) cteWindowSize = atoi(argv[i++]);
@@ -78,12 +78,11 @@ int main(int argc, char* argv[])
   throttleController.ControlFunction = [](double e) { return 0.0005-e; };
 
   std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(10);
-  h.onMessage([&](uWS::WebSocket<uWS::SERVER>* ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
-    if (length && length > 2 && data[0] == '4' && data[1] == '2')
-    {
+    if (length && length > 2 && data[0] == '4' && data[1] == '2') {
       auto s = hasData(std::string(data));
       if (s != "") {
         auto j = json::parse(s);
@@ -93,8 +92,8 @@ int main(int argc, char* argv[])
           double cte = stod(j[1]["cte"].get<string>());
           double speed = stod(j[1]["speed"].get<string>());
           double angle = stod(j[1]["steering_angle"].get<string>());
-		  if (iter < 2 && fabs(cte)>5.0) pid.Restart(*ws);
-		  cout << "Input: Iter#" << iter <<",CTE=" << cte << ",Steering=" << angle << ",Speed:=" << speed;
+      if (iter < 2 && fabs(cte)>5.0) pid.Restart(ws);
+      cout << "Input: Iter#" << iter <<",CTE=" << cte << ",Steering=" << angle << ",Speed:=" << speed;
           /*
           * Calcuate steering value here, remember the steering value is [-1, 1].
           */
@@ -112,7 +111,7 @@ int main(int argc, char* argv[])
 				  iter = 0;
 				  cteStats.clear();
 				  throttleController.Reset();
-				  pid.Restart(*ws);
+				  pid.Restart(ws);
 			  }
 		  } else {
 			  throttle_value += (iter > cteWindowSize ? 0.01 - cteStats.varp() : 0); // Throttle adjusted by moving variance of last few CTE
@@ -131,13 +130,13 @@ int main(int argc, char* argv[])
           //std::cout << msg << std::endl;
           cout << "\tOutput: Steer=" << steer_value << ",Throttle=" << throttle_value;
           cout << ",ctestdevp=" << cteStats.stdevp() << ",varp=" << cteStats.varp() << ",n=" << cteStats.n() <<",TE" << throttleController.TotalError() << endl;
-          ws->send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
         // Manual driving
         string msg = "42[\"manual\",{}]";
-		cout << msg << endl;
-        ws->send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+        cout << msg << endl;
+        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }
   });
@@ -154,13 +153,13 @@ int main(int argc, char* argv[])
     }
   });
 
-  h.onConnection([&h,&iter,&pid](uWS::WebSocket<uWS::SERVER>* ws, uWS::HttpRequest req) {
+  h.onConnection([&h,&iter,&pid](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
 	iter = 0;
 	cout << "Connected!!!" << endl;
   });
 
-  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER>* ws, int code, char *message, size_t length) {
-    ws->close();
+  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
+    ws.close();
     cout << "Disconnected" << endl;
   });
 
