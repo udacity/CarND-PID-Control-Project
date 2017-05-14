@@ -7,7 +7,7 @@ add_definitions(-std=c++11)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-set(sources src/PID.cpp src/main.cpp)
+set(sources src/PID.cpp src/main.cpp src/OnlineStats.cpp)
 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
@@ -23,4 +23,6 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 add_executable(pid ${sources})
 
-target_link_libraries(pid z ssl uv uWS)
+if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    target_link_libraries(pid z ssl uv uWS)
+endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
