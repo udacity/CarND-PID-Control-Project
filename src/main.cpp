@@ -1,15 +1,17 @@
 #include <uWS/uWS.h>
 #include <iostream>
+#include <string>
 #include "json.hpp"
 #include "PID.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <cstdlib>
 #include <iomanip>
+#include <chrono>
 
 // for convenience
 using json = nlohmann::json;
 using namespace std;
+using namespace std::chrono;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -18,29 +20,40 @@ double rad2deg(double x) { return x * 180 / pi(); }
 
 void read_args(int argc, char* argv[], double& Kp, double& Ki, double& Kd, double& throttle,
                bool& twiddle, double& dKp, double& dKi, double& dKd, long long& tolerance, 
-               bool& adaptiveThrottle, int& cteWindowSize) {
-  Kp = 0.125; Kd = 3.0; Ki = 0.0000; throttle = 0.5;
+               bool& adaptiveThrottle, int& cteWindowSize,
+               bool& breakOnHighCte, double& highCte) {
+  //Kp = 0.125; Kd = 3.0; Ki = 0.0000; throttle = 0.5; // quite safe
+  Kp = 0.088; Kd = 2.875; Ki = 0.0000; throttle = 0.95; // speedy
   twiddle =  false; dKp = 0.5; dKd = 1.2; dKi = 0.000001; tolerance = 250000ll;
-  adaptiveThrottle = false;  cteWindowSize = 40;
+  adaptiveThrottle = false;  cteWindowSize = 40; // on be default for speedy
+  breakOnHighCte = false; highCte = 3.0;
   auto i = 1;
 
-  if (argc > i) Kp = atof(argv[i++]);
-  if (argc > i) Ki = atof(argv[i++]);
-  if (argc > i) Kd = atof(argv[i++]);
-  if (argc > i) throttle = atof(argv[i++]);
-  if (argc == i) return;
-  switch (auto ch = tolower(argv[i++][0])) {
-  case 'y':
-  case 't':
-    twiddle = true;
-    if (!twiddle) return;
-    if (argc > i) dKp = atof(argv[i++]);
-    if (argc > i) dKi = atof(argv[i++]);
-    if (argc > i) dKd = atof(argv[i++]);
-    if (argc > i) tolerance = atoi(argv[i++]);
-  case 'a':
-    adaptiveThrottle = true;
-    if (argc > i) cteWindowSize = atoi(argv[i++]);
+  while (argc > i) {
+    switch (tolower(argv[i++][0])) {
+    case 'y':
+    case 't':
+      twiddle = true;
+      if (argc > i) dKp = stod(argv[i++]);
+      if (argc > i) dKi = stod(argv[i++]);
+      if (argc > i) dKd = stod(argv[i++]);
+      if (argc > i) tolerance = stoi(argv[i++]);
+      break;
+    case 'a':
+      adaptiveThrottle = true;
+      if (argc > i) cteWindowSize = stoi(argv[i++]);
+      break;
+    case 'b':
+      breakOnHighCte = true;
+      if (argc > i) highCte = stod(argv[i++]);
+      break;
+    default:
+      Kp = stod(argv[i-1]);
+      if (argc > i) Ki = stod(argv[i++]);
+      if (argc > i) Kd = stod(argv[i++]);
+      if (argc > i) throttle = stod(argv[i++]);
+      break;
+    }
   }
 }
 
@@ -62,23 +75,25 @@ std::string hasData(std::string s) {
 int main(int argc, char* argv[])
 {
   uWS::Hub h;
-  double Kp, Ki, Kd, throttle, dKp, dKi, dKd; long long tolerance; 
-  bool twiddle, adaptiveThrottle;
+  double Kp, Ki, Kd, throttle, dKp, dKi, dKd, highCte; long long tolerance; 
+  bool twiddle, adaptiveThrottle, breakOnHighCte;
   int cteWindowSize;
-  read_args(argc, argv, Kp, Ki, Kd, throttle, twiddle, dKp, dKi, dKd, tolerance, adaptiveThrottle, cteWindowSize);
-  PID pid; MovingOnlineStats cteStats{ 10 }; PID throttleController;
-  // TODO: Initialize the pid variable.
+  read_args(argc, argv, Kp, Ki, Kd, throttle, twiddle, dKp, dKi, dKd, tolerance, adaptiveThrottle, cteWindowSize, breakOnHighCte, highCte);
+  cout << "Kp = " << Kp << ", Ki = " << Ki << ", Kd = " << Kd << ", throttle = " << throttle << endl;
+  cout << "dKp= " << dKp << ", dKi= " << dKi << ", dKd= " << dKd << ", tolerance=" << tolerance << endl;
+  cout << "adaptiveThrottle=" << adaptiveThrottle << ", cteWindowSize=" << cteWindowSize << endl;
+  cout << "breakOnHighCte=" << breakOnHighCte << ", highCte=" << highCte << endl;
+
+  PID pid; MovingOnlineStats cteStats{ cteWindowSize }; auto t1 = steady_clock::now();
+  // Initialize the pid variable.
   long long iter = 0ll;
   pid.Init(Kp, Ki, Kd);
   pid.ControlFunction = [](double e) { return e > 1.0 ? 1.0 : e < -1.0 ? -1.0 : e; };
   pid.InitTwiddle(twiddle, dKp, dKi, dKd);
-  pid.TwiddleErrorFunction = [](double tolerance, double num_steps, double stdevp) { return num_steps; }; // / (stdevp*stdevp);
+  pid.TwiddleErrorFunction = [](double tolerance, double num_steps, double stdevp) { return num_steps; };
 
-  throttleController.Init(0.5, .001, 5);
-  throttleController.ControlFunction = [](double e) { return 0.0005-e; };
-
-  std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(10);
-  h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(6);
+  h.onMessage([&](uWS::WebSocket<uWS::SERVER>* ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -92,36 +107,34 @@ int main(int argc, char* argv[])
           double cte = stod(j[1]["cte"].get<string>());
           double speed = stod(j[1]["speed"].get<string>());
           double angle = stod(j[1]["steering_angle"].get<string>());
-      if (iter < 2 && fabs(cte)>5.0) pid.Restart(ws);
-      cout << "Input: Iter#" << iter <<",CTE=" << cte << ",Steering=" << angle << ",Speed:=" << speed;
-          /*
-          * Calcuate steering value here, remember the steering value is [-1, 1].
-          */
-      double steer_value = pid.ControlValue();// *(1.0 - (speed - 60.0) / 120.0);
-		  double throttle_value = throttle;
-		  cteStats.addData(cte);
-      pid.UpdateError(cte);
-      if (iter > cteWindowSize) throttleController.UpdateError(cteStats.stdevp());
-		  iter++;
+          if (iter < 2 && fabs(cte)>5.0) pid.Restart(*ws);
+          cout << "Input: Iter#" << iter <<",CTE=" << cte << ",Steering=" << angle << ",Speed:=" << speed;
 
-		  if (twiddle) {
-			  if ((iter > 50 && (speed < 0.015)) || fabs(cte)>4) { //|| pid.err_stats.stdevs()>1.0)) || fabs(cte)>3.2) {
-				  pid.Twiddle(tolerance, iter);
-				  if (pid.twiddle_iter > 500) exit(1);
-				  iter = 0;
-				  cteStats.clear();
-				  throttleController.Reset();
-				  pid.Restart(ws);
-			  }
-		  } else {
-			  throttle_value += (iter > cteWindowSize ? 0.01 - cteStats.varp() : 0); // Throttle adjusted by moving variance of last few CTE
-			  if (fabs(cte) > 3.0) { // apply break if error beyond this
-          // NB: doing nothing seems to gie good result as well
-				  //throttle_value = -throttle;// / 2.0;
-				  //steer_value = steer_value < 0.0 ? -1.0 : 1.0;
-          //throttle_value = throttle*1.25;
-        }
-		  }
+          // Calcuate steering value here, remember the steering value is [-1, 1].
+          auto steer_value = pid.ControlValue();  // TODO: think of scaling sensitivity down with speed ...  *(1.0 - (speed - 60.0) / 120.0);
+          auto throttle_value = throttle;
+          cteStats.addData(cte);
+          pid.UpdateError(cte);
+          iter++;
+
+          if (twiddle) {
+            if ((iter > 50 && (speed < 0.015)) || fabs(cte)>4) { //|| pid.err_stats.stdevs()>1.0)) || fabs(cte)>3.2) {
+              pid.Twiddle(tolerance, iter);
+              if (pid.twiddle_iter > 500) exit(1);
+              iter = 0;
+              cteStats.clear();
+              pid.Restart(*ws);
+            }
+          }
+          if (adaptiveThrottle) {
+            throttle_value += (iter > cteWindowSize ? 0.01 - cteStats.varp() : 0); // Throttle adjusted by moving variance of last few CTE
+          }
+          if (breakOnHighCte && fabs(cte) > highCte && fabs(angle)>7.5) { // apply break if error beyond this
+            // NB: doing nothing seems to give good result as well
+            throttle_value = -throttle;                     // tried scaling the negative throttle, e.g -throttle/2.0;
+            //steer_value = steer_value < 0.0 ? -1.0 : 1.0; // tried forcing to max steer in mediam direction
+            //throttle_value = throttle*1.25;               // tried increasing the throttle, with max steer
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
@@ -129,14 +142,17 @@ int main(int argc, char* argv[])
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;
           cout << "\tOutput: Steer=" << steer_value << ",Throttle=" << throttle_value;
-          cout << ",ctestdevp=" << cteStats.stdevp() << ",varp=" << cteStats.varp() << ",n=" << cteStats.n() <<",TE" << throttleController.TotalError() << endl;
-          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          cout << ",ctevarp=" << cteStats.varp() << ",n=" << cteStats.n();
+          auto t2 = steady_clock::now();
+          cout << ",ms=" << (duration_cast<duration<double>>(t2 - t1)).count()*1000 << endl;
+          t1 = t2;
+          ws->send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
         // Manual driving
         string msg = "42[\"manual\",{}]";
         cout << msg << endl;
-        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+        ws->send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }
   });
@@ -153,13 +169,13 @@ int main(int argc, char* argv[])
     }
   });
 
-  h.onConnection([&h,&iter,&pid](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-	iter = 0;
-	cout << "Connected!!!" << endl;
+  h.onConnection([&h,&iter,&pid](uWS::WebSocket<uWS::SERVER>* ws, uWS::HttpRequest req) {
+    iter = 0;
+    cout << "Connected!!!" << endl;
   });
 
-  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-    ws.close();
+  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER>* ws, int code, char *message, size_t length) {
+    ws->close();
     cout << "Disconnected" << endl;
   });
 

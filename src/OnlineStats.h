@@ -15,7 +15,7 @@ public:
   virtual void addData(double x); // add data itme; only mathematical effect, the data is not stored
   void removeData(double x);      // remove data item; only mathematical effect, the data is not stored
 
-  double n()      const { return n_; }
+  int n()      const { return n_; }
   double mean()   const { return K_ + sum_ / n_; }
   double varp()   const;      // variance of population
   double stdevp() const;      // standard deviation of population
