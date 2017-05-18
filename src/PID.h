@@ -4,20 +4,6 @@
 class PID {
 public:
   /*
-  * Errors
-  */
-  double p_error;
-  double i_error;
-  double d_error;
-
-  /*
-  * Coefficients
-  */ 
-  double Kp;
-  double Ki;
-  double Kd;
-
-  /*
   * Constructor
   */
   PID();
@@ -40,7 +26,28 @@ public:
   /*
   * Calculate the total PID error.
   */
-  double TotalError();
+  double CalculateSteer();
+
+  /*
+   * Calculate throttle.
+   */
+  double CalculateThrottle(double steer_value, double speed);
+
+private:
+    /*
+  * Errors
+  */
+  double p_error;
+  double i_error;
+  double d_error;
+
+  /*
+  * Coefficients
+  */
+  double Kp;
+  double Ki;
+  double Kd;
+
 };
 
 #endif /* PID_H */
