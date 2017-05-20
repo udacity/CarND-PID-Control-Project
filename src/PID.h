@@ -26,12 +26,8 @@ public:
   /*
   * Calculate the total PID error.
   */
-  double CalculateSteer();
+  double TotalError();
 
-  /*
-   * Calculate throttle.
-   */
-  double CalculateThrottle(double steer_value, double speed);
 
 private:
     /*

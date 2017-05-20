@@ -27,23 +27,6 @@ void PID::UpdateError(double cte) {
   this->p_error = cte;
 }
 
-double PID::CalculateSteer() {
-  double steer = (- this->Kp * this->p_error - this->Kd * this->d_error - this->Ki * this->i_error);
-  if (steer < -1) {
-    return -1;
-  }
-  if (steer > 1){
-    return 1;
-  }
-  return steer;
-}
-
-double PID::CalculateThrottle(double steer_value, double speed) {
-  if (fabs(steer_value) < 0.03 && speed < 30) {
-    return 1.0;
-  }
-  if (fabs(steer_value) < 0.30)  {
-    return 0.3;
-  }
-  return 0.0;
+double PID::TotalError() {
+   return -this->Kp * this->p_error - this->Kd * this->d_error - this->Ki * this->i_error;
 }
