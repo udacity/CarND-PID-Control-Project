@@ -2,6 +2,7 @@
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
+#include "Twiddle.h"
 #include <math.h>
 
 // for convenience
@@ -28,18 +29,38 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int main()
+double SPEED_GOAL = 50;
+
+int main(int argc, const char *argv[])
 {
   uWS::Hub h;
 
   PID pid;
-  PID pid_throttle;
-  // TODO: Initialize the pid variable.
-  //pid.Init(0.09, 0.000001, 0.9);
-  pid.Init(0.1, 0.001, 4.0);
-  pid_throttle.Init(0.1, 0.001, 4.0);
 
-  h.onMessage([&pid_throttle, &pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  double kp = 1.5;
+  double ki = 0.01;
+  double kd = 40.0;
+  bool twiddle = false;
+  int iteration = 0;
+  double error = 0;
+
+  if (argc == 4 ) {
+    kp = strtod(argv[1], NULL);
+    ki = strtod(argv[2], NULL);
+    kd = strtod(argv[3], NULL);
+  } else if (argc == 5) {
+    kp = strtod(argv[1], NULL);
+    ki = strtod(argv[2], NULL);
+    kd = strtod(argv[3], NULL);
+    twiddle = true;
+  } else {
+    std::cout << "Usage ./pid kp ki kd  OR ./pid kp ki kd twiddle" << std::endl ;
+    return -1 ;
+  }
+
+  pid.Init(kp, ki, kd);
+
+  h.onMessage([&twiddle, &error, &iteration, &pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -62,25 +83,27 @@ int main()
           * another PID controller to control the speed!
           */
 
+          if (twiddle) {
+              iteration++;
+              error += cte;
+              if (iteration > 500) {
+                std::cout << "Exit" << std::endl ;
+                exit(0);
+              }
+          }
           pid.UpdateError(cte);
           double steer_value = pid.TotalError();
           steer_value = std::max(steer_value, -1.0);
           steer_value = std::min(steer_value, 1.0);
 
-          double speed_goal = 50;
-          pid_throttle.UpdateError(fabs(speed_goal - speed));
-
-          double throttle = fabs(pid.TotalError());
-          if (speed > speed_goal) {
-            throttle = 0;
-          }
-          throttle = throttle / 10 * speed_goal;
-
-          std::cout << "CTE: " << cte
+          double throttle = 0.3;
+          if (!twiddle) {
+            std::cout << "CTE: " << cte
                     << " Speed: " << speed
                     << " Steering: " << steer_value
                     << " Throttle: " << throttle
                     << std::endl;
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
