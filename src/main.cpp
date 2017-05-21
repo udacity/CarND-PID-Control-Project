@@ -2,7 +2,6 @@
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
-#include "Twiddle.h"
 #include <math.h>
 
 // for convenience
@@ -36,11 +35,10 @@ int main(int argc, const char *argv[])
   uWS::Hub h;
 
   PID pid;
-
-  double kp = 1.5;
-  double ki = 0.01;
-  double kd = 40.0;
-  bool twiddle = false;
+  double kp = 0.1;
+  double ki = 0.001;
+  double kd = 4.0;
+  int max_iterations = 0;
   int iteration = 0;
   double error = 0;
 
@@ -52,15 +50,16 @@ int main(int argc, const char *argv[])
     kp = strtod(argv[1], NULL);
     ki = strtod(argv[2], NULL);
     kd = strtod(argv[3], NULL);
-    twiddle = true;
+    max_iterations = strtod(argv[4], NULL);
   } else {
-    std::cout << "Usage ./pid kp ki kd  OR ./pid kp ki kd twiddle" << std::endl ;
+    std::cout << "Usage without twiddle ./pid kp ki kd" << std::endl;
+    std::cout << "Usage with twiddle ./pid kp ki kd iterations" << std::endl;
     return -1 ;
   }
 
   pid.Init(kp, ki, kd);
 
-  h.onMessage([&twiddle, &error, &iteration, &pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&max_iterations, &error, &iteration, &pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -83,21 +82,22 @@ int main(int argc, const char *argv[])
           * another PID controller to control the speed!
           */
 
-          if (twiddle) {
-              iteration++;
-              error += cte;
-              if (iteration > 500) {
-                std::cout << "Exit" << std::endl ;
-                exit(0);
-              }
-          }
           pid.UpdateError(cte);
           double steer_value = pid.TotalError();
           steer_value = std::max(steer_value, -1.0);
           steer_value = std::min(steer_value, 1.0);
 
           double throttle = 0.3;
-          if (!twiddle) {
+
+          // it twiddle active
+          if (max_iterations > 0) {
+              iteration++;
+              error += cte;
+              if (iteration > max_iterations) {
+                std::cout << "Exit" << std::endl ;
+                exit(0);
+              }
+          } else {
             std::cout << "CTE: " << cte
                     << " Speed: " << speed
                     << " Steering: " << steer_value
