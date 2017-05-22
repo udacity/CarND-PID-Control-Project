@@ -92,9 +92,11 @@ int main(int argc, const char *argv[])
           // it twiddle active
           if (max_iterations > 0) {
               iteration++;
-              error += cte;
+              error += fabs(cte);
               if (iteration > max_iterations) {
-                std::cout << "Exit" << std::endl ;
+                std::cout << "Error: " << error << std::endl ;
+                std::string reset_msg = "42[\"reset\", {}]";
+                ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
                 exit(0);
               }
           } else {
