@@ -35,6 +35,8 @@ int main(int argc, const char *argv[])
   uWS::Hub h;
 
   PID pid;
+  PID pid_throttle;
+
   double kp = 0.1;
   double ki = 0.001;
   double kd = 4.0;
@@ -58,8 +60,9 @@ int main(int argc, const char *argv[])
   }
 
   pid.Init(kp, ki, kd);
+  pid_throttle.Init(kp, ki, kd);
 
-  h.onMessage([&max_iterations, &error, &iteration, &pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&max_iterations, &error, &iteration, &pid, &pid_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -87,7 +90,16 @@ int main(int argc, const char *argv[])
           steer_value = std::max(steer_value, -1.0);
           steer_value = std::min(steer_value, 1.0);
 
-          double throttle = 0.3;
+          double speed_goal = 60;
+          pid_throttle.UpdateError(fabs(speed_goal - speed));
+
+          double throttle = fabs(pid.TotalError());
+          throttle = std::max(0.3, throttle);
+
+          if (speed > speed_goal) {
+            throttle = 0;
+          }
+          throttle = throttle / 10 * speed_goal;
 
           // it twiddle active
           if (max_iterations > 0) {
