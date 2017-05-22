@@ -105,7 +105,7 @@ int main(int argc, const char *argv[])
           if (max_iterations > 0) {
               iteration++;
               error += fabs(cte);
-              if (iteration > max_iterations) {
+              if ((iteration > max_iterations) || (fabs(cte) > 5)) {
                 std::cout << "Error: " << error << std::endl ;
                 std::string reset_msg = "42[\"reset\", {}]";
                 ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
