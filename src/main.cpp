@@ -90,7 +90,7 @@ int main(int argc, const char *argv[])
           steer_value = std::max(steer_value, -1.0);
           steer_value = std::min(steer_value, 1.0);
 
-          double speed_goal = 60;
+          double speed_goal = 50;
           pid_throttle.UpdateError(fabs(speed_goal - speed));
 
           double throttle = fabs(pid.TotalError());
@@ -105,16 +105,13 @@ int main(int argc, const char *argv[])
           if (max_iterations > 0) {
               iteration++;
               error += fabs(cte);
-              // if the number of iterations is done
-              // or the car goes out of the road, the program exits
-              if ((iteration > max_iterations) || (fabs(cte) > 5)) {
-                // if the car goes out of the road before the last iteration,
-                // the error value is fulfilled with a proportional value, to avoid
-                // falses "best_errors"
-                if (fabs(cte) > 5) {
-                  error += (max_iterations - iteration) * 5;
-                }
-                std::cout.setf(std::ios::fixed);  // to avoid output scientific notation
+              /*
+              if (fabs(cte) > 10) {
+                error += (max_iterations - iteration) * ;
+              } */
+              if ((iteration > max_iterations) || (fabs(cte) > 10)) {
+                error /= iteration;
+                std::cout.setf(std::ios::fixed);
                 std::cout << "Error: " << error << std::endl ;
                 std::string reset_msg = "42[\"reset\", {}]";
                 ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);

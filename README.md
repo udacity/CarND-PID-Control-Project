@@ -3,6 +3,95 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## Intro
+
+The goal of this project is to implement a [PID controller](https://en.wikipedia.org/wiki/PID_controller) to drive a car successfully around the [Udacity self-driving car simulator](https://github.com/udacity/self-driving-car-sim).
+
+A PID controller continuously calculates an error value as the difference between a desired point and a measured process variable and applies a correction based on (P)roportional, (I)ntegral, and (D)erivative terms.
+
+## The P, I, D components in the implementation.
+
+In the case of driving a car, the P component provides a steering angle that is proportional to the cross-track error (CTE). The car simulator returns the CTE value, and the P tries to adjust the error by making a counter steer, trying to remain to the center of the road. A high P value is a violent steer, and a low P value is a smoother one.
+
+The I control, is the accumulation of errors (an integral), and changes the steering angle proportional to the integrated value of the CTE. With a high I value, the car will compensate the past errors, oscillating more to reduce the sum of past errors. A low value will produce less oscillations, to reduce the accumulated error slowly.
+
+D is the derivative control, and focuses on the rate of angle change. A high D will make the car less sensitive and will move smoothly to the optimum track. A low D value will make the car swivel more even following the optimum track.
+
+## How the final hyperparameters were chosen?
+
+I have adapted the C++ code to accept argument parameters. If 3 arguments are passed, then the program runs in a "normal" way with the three values as `p,i,d` inputs. For example:
+
+```
+./pid 1.1 0.001 4.0
+```
+
+If a forth parameter is used, is used to set a maximum number of iterations, and it returns the final error value. For example, this command will launch the same than before, but it will finish after 100 iterations.
+
+```
+./pid 1.1 0.001 4.0 100
+```
+
+This second version is used from a [python notebook](twiddle.ipynb) to execute the *Twiddle* algorithm.
+
+```
+  def run(p, steps=1500):
+      out = check_output(["build/pid", str(p[0]), str(p[1]), str(p[2]), str(steps)])
+      out = out.decode().replace("4567", "")
+      numbers = re.findall(r"[-+]?\d*\.\d+|\d+", out)
+      return float(numbers[0])
+
+  def twiddle(tol=0.1, steps=1500):
+      p = [0.0, 0.0, 0.0]
+      dp = [1.0, 1.0, 1.0]
+      best_err = run(p, steps)
+
+      it = 0
+      while sum(dp) > tol:
+          print("Iteration {}, best_error={}, p=[{:.3f} {:.3f} {:.3f}], dp=[{:.3f} {:.3f} {:.3f}]".format(
+                  it, best_err,
+                  p[0], p[1], p[2],
+                  dp[0], dp[1], dp[2]))
+
+          for i in range(len(p)):
+              p[i] += dp[i]
+              err = run(p, steps)
+
+              if err < best_err:
+                  best_err = err
+                  dp[i] *= 1.1
+              else:
+                  p[i] -= 2 * dp[i]
+                  err = run(p, steps)
+
+                  if err < best_err:
+                      best_err = err
+                      dp[i] *= 1.1
+                  else:
+                      p[i] += dp[i]
+                      dp[i] *= 0.9
+          it += 1
+      return p
+```
+
+To launch the Twiddle algorithm, the simulator must be running and the following python line must be used:
+
+```
+  twiddle(tol=0.001, steps=1000)
+```
+
+After several tests, my final parameters are (Kp, Ki, Kd) = (0.1, 0.001, 4.0). To execute:
+
+```
+./pid 0.1 0.001 4.0
+```
+
+## Improvements
+
+Apart of the PID controller for the steering angle, another one is used to control the throttle. This allows the achivement of higher speeds.
+
+
+---
+
 ## Dependencies
 
 * cmake >= 3.5
@@ -25,7 +114,7 @@ Self-Driving Car Engineer Nanodegree Program
 1. Clone this repo.
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./pid`. 
+4. Run it: `./pid`.
 
 ## Editor Settings
 
@@ -40,45 +129,3 @@ using the following settings:
 
 Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
 
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
