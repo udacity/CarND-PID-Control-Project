@@ -1,8 +1,14 @@
-#include <uWS/uWS.h>
+#include "uWS\uWS.h"
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
+
+
+#define _USE_MATH_DEFINES
 #include <math.h>
+#define  use_ipv4
+
+
 
 // for convenience
 using json = nlohmann::json;
