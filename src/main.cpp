@@ -1,4 +1,4 @@
-#include <uWS\uWS.h>
+#include <uWS/uWS.h>
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
@@ -41,7 +41,8 @@ int main()
 
   PID pid;
   // TODO: Initialize the pid variable.
-  pid.Init(0.15, 3.0, 0.0001);
+  // Kp, Ki, Kd:
+  pid.Init(0.09, 0.00001, 1.5);
 
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -66,12 +67,21 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
+          double max_steer = 1.0;
+          double min_steer = -1.0;
 
           pid.UpdateError(cte);
 
-          // std::cout << "kp: " << pid.Kp << std::endl;
           
-          steer_value = -pid.Kp*pid.p_error - pid.Kd*pid.d_error - pid.Ki*pid.i_error;
+          
+          steer_value = pid.TotalError();
+
+          if (steer_value>max_steer)
+          {
+            steer_value = max_steer;
+          }else if (steer_value<min_steer){
+            steer_value = min_steer;
+          }
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 

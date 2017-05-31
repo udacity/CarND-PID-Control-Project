@@ -1,6 +1,8 @@
 #ifndef PID_H
 #define PID_H
 
+#include <time.h>
+
 class PID {
 public:
   /*
@@ -9,6 +11,8 @@ public:
   double p_error;
   double i_error;
   double d_error;
+  double old_d_error;
+  bool has_old_d_error;
 
   /*
   * Coefficients
@@ -16,6 +20,9 @@ public:
   double Kp;
   double Ki;
   double Kd;
+
+  clock_t old_t;
+  clock_t t;
 
   /*
   * Constructor
