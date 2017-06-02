@@ -34,7 +34,9 @@ void PID::UpdateError(double cte) {
     has_old_d_error = true;
   }
   t = clock();
-  double dt = t - old_t;
+  double dt = ((t - old_t) *1.0) /CLOCKS_PER_SEC;
+  std::cout << "\n" << std::endl;
+  std::cout << "dt: " << dt<< std::endl;
   // update errors
   p_error = cte;
   d_error = (cte - old_d_error)/dt;
@@ -46,8 +48,8 @@ void PID::UpdateError(double cte) {
 
 double PID::TotalError() {
 
-  std::cout << "p_error: " << p_error << " d_error: " << d_error << " i_error: " << i_error << std::endl;
   std::cout << "\n" << std::endl;
+  std::cout << "p_error: " << p_error << " d_error: " << d_error << " i_error: " << i_error << std::endl;
   
   return -Kp*p_error - Kd*d_error - Ki*i_error;
 }
