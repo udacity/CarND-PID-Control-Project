@@ -1,6 +1,7 @@
 #include "PID.h"
 #include <iostream>
-#include <time.h>
+#include <chrono>
+#include <ctime>
 
 using namespace std;
 
@@ -21,7 +22,8 @@ void PID::Init(double Kp, double Ki, double Kd) {
   d_error = 0.0;
   i_error = 0.0;
 
-  old_t = clock();
+  old_t = std::chrono::system_clock::now();
+  // old_t = clock();
 
   has_old_d_error = false;
 }
@@ -33,13 +35,15 @@ void PID::UpdateError(double cte) {
 
     has_old_d_error = true;
   }
-  t = clock();
-  double dt = ((t - old_t) *1.0) /CLOCKS_PER_SEC;
+  t = std::chrono::system_clock::now();
+  // t = clock();
+  std::chrono::duration<double> dt = t - old_t;
+  // double dt = t - old_t;
   std::cout << "\n" << std::endl;
-  std::cout << "dt: " << dt<< std::endl;
+  std::cout << "dt: " << dt.count() << std::endl;
   // update errors
   p_error = cte;
-  d_error = (cte - old_d_error)/dt;
+  d_error = (cte - old_d_error)/dt.count();
   // d_error = (cte - old_d_error);
   i_error += cte;
 

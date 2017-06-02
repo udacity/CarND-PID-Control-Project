@@ -1,7 +1,10 @@
 #ifndef PID_H
 #define PID_H
 
-#include <time.h>
+#include <chrono>
+#include <ctime>
+
+// #include <time.h>
 
 class PID {
 public:
@@ -21,8 +24,10 @@ public:
   double Ki;
   double Kd;
 
-  clock_t old_t;
-  clock_t t;
+  // clock_t old_t;
+  // clock_t t;
+
+  std::chrono::time_point<std::chrono::system_clock> old_t, t;
 
   /*
   * Constructor
