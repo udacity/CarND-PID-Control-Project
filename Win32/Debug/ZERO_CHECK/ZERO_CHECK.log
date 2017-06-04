@@ -1,0 +1,8 @@
+﻿  Checking Build System
+  CMake is re-running because D:/codes_lib/SDCND/CarND-PID-Control-Project/build/CMakeFiles/generate.stamp is out-of-date.
+    the file 'D:/codes_lib/SDCND/CarND-PID-Control-Project/CMakeLists.txt'
+    is newer than 'D:/codes_lib/SDCND/CarND-PID-Control-Project/build/CMakeFiles/generate.stamp.depend'
+    result='-1'
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: D:/codes_lib/SDCND/CarND-PID-Control-Project/build
