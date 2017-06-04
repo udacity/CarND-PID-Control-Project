@@ -15,8 +15,8 @@ PID::~PID() {}
 
 void PID::Init(double Kp, double Ki, double Kd) {
   this->Kp = Kp;
-  this->Kd = Kd;
   this->Ki = Ki;
+  this->Kd = Kd;
 
   p_error = 0.0;
   d_error = 0.0;
@@ -39,8 +39,8 @@ void PID::UpdateError(double cte) {
   // t = clock();
   std::chrono::duration<double> dt = t - old_t;
   // double dt = t - old_t;
-  std::cout << "\n" << std::endl;
-  std::cout << "dt: " << dt.count() << std::endl;
+  // std::cout << "\n" << std::endl;
+  // std::cout << "dt: " << dt.count() << std::endl;
   // update errors
   p_error = cte;
   d_error = (cte - old_d_error)/dt.count();
@@ -48,12 +48,13 @@ void PID::UpdateError(double cte) {
   i_error += cte;
 
   old_t = t;
+  old_d_error = cte;
 }
 
 double PID::TotalError() {
 
   std::cout << "\n" << std::endl;
-  std::cout << "p_error: " << p_error << " d_error: " << d_error << " i_error: " << i_error << std::endl;
+  // std::cout << "p_error: " << p_error << " d_error: " << d_error << " i_error: " << i_error << std::endl;
   
   return -Kp*p_error - Kd*d_error - Ki*i_error;
 }
