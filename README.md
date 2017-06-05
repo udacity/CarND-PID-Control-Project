@@ -2,6 +2,17 @@
 Self-Driving Car Engineer Nanodegree Program
 
 ---
+## Discussion on PID coefficients
+
+* **P is the proportional control coefficient.** This coefficient (`Kp`) sets the response strength of the proportional controller by giving a response that is proportional to the magnitude of the error (CTE or Cross Track Error). In the project, where the CTE represents the difference between the car trajectory and the reference trajectory, a larger `Kp` means that the car would steer more vigorously with respect to the CTE, and vice versa. However, `Kp` makes the trajectory to overshoot and oscillating about the reference trajectory. I found `Kp = 0.15` to produce lesser oscillation while tuning the parameters for the project manually. 
+
+* **D is the differential control coefficient.** This coefficient (`Kd`) helps to eliminate the instability of using only the P controller, by noticing that the error is becoming smaller over time (by calculating a derivative of the error) and therefore counters the effect of the P controller. In the project, a larger `Kd` makes the car to correct itself more frequently. However this also makes the car drive slowly. I manually found `Kd = 0.17` to be a suitable value for a smoother driver.
+
+* **I is the integral control coefficient.** This coefficient (`Ki`) helps to correct any bias in the system. In practise, this might be as a result of misalignment of car wheels or extra loads on the vehicle. In the project, there is little or no bias, as the car could run perfectly with the `Ki = 0.0`.
+
+* In summary, the car is able to run up to ..... in the linux simulator with screen resolution = 640*480 and fastest graphics quality.
+
+---
 
 ## Dependencies
 
