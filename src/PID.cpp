@@ -43,6 +43,7 @@ void PID::UpdateError(double cte) {
   // std::cout << "dt: " << dt.count() << std::endl;
   // update errors
   p_error = cte;
+  // d_error = (cte - old_d_error); // for uncalculated dt
   d_error = (cte - old_d_error)/dt.count();
   // d_error = (cte - old_d_error);
   i_error += cte;

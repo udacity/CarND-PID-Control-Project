@@ -35,11 +35,11 @@ std::string hasData(std::string s) {
   return "";
 }
 
-//void reset_simulator(uWS::WebSocket<uWS::SERVER>& ws){
-//  // reset
-//  std::string msg("42[\"reset\", {}]");
-//  ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-//}
+void reset_simulator(uWS::WebSocket<uWS::SERVER>& ws){
+ // reset
+ std::string msg("42[\"reset\", {}]");
+ ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+}
 
 int main()
 {
@@ -48,13 +48,10 @@ int main()
   PID pid;
   // TODO: Initialize the pid variable.
   // Kp, Ki, Kd:
-  // pid.Init(0.2, 0.0005, 0.1);
-  // pid.Init(0.3, 0.001, 0.3);
-  // pid.Init(0.3, 0.0005, 0.3);
-  // pid.Init(0.2, 0.0001, 0.2);
-  // pid.Init(0.4, 0.0001, 0.3);
-  pid.Init(0.15, 0.0001, 0.15);
-
+  pid.Init(0.15, 0.0001, 0.15); // best so far
+  // pid.Init(0.17, 0.00005, 0.15);
+  // pid.Init(0.15, 0.001, 3.0); // for uncalculated dt
+  // pid.Init(0.17, 0.0002, 0.18);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -83,8 +80,6 @@ int main()
 
           pid.UpdateError(cte);
 
-          
-          
           steer_value = pid.TotalError();
 
           if (steer_value>max_steer)
@@ -110,7 +105,7 @@ int main()
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }
-  });
+  }); // onMessage end.
 
   // We don't need this since we're not using HTTP but if it's removed the program
   // doesn't compile :-(
