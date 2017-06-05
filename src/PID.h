@@ -24,9 +24,6 @@ public:
   double Ki;
   double Kd;
 
-  // clock_t old_t;
-  // clock_t t;
-
   std::chrono::time_point<std::chrono::system_clock> old_t, t;
 
   /*
