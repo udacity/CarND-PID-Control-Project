@@ -12,6 +12,8 @@ Self-Driving Car Engineer Nanodegree Program Project
 
 * In summary, I chose the hyperparameters manually by starting with only `Kp` and observing the response. I added the value for `Kd` after beign satisfied with `Kp`. I also tried with different values of `Ki`, to finally decide on `Kp = 0.18, Kd = 0.125, Ki = 0.00005 `. The car is able to run up to 34 mph in the linux simulator with screen resolution = 800*600 and Fantastic graphics quality.
 
+* Find a video of the simulation with different control parameters here: [Simulation Video](https://youtu.be/nopUALPo_MM)
+
 ---
 
 ## Original Readme
