@@ -2,7 +2,12 @@
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
+
+
+#define _USE_MATH_DEFINES
 #include <math.h>
+
+#define  use_ipv4
 
 // for convenience
 using json = nlohmann::json;
@@ -28,12 +33,20 @@ std::string hasData(std::string s) {
   return "";
 }
 
+void reset_simulator(uWS::WebSocket<uWS::SERVER>& ws){
+ // reset
+ std::string msg("42[\"reset\", {}]");
+ ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+}
+
 int main()
 {
   uWS::Hub h;
 
   PID pid;
-  // TODO: Initialize the pid variable.
+  // Initialize the PID variable.
+  // Kp, Ki, Kd:
+  pid.Init(0.18, 0.00005, 0.125);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -52,14 +65,22 @@ int main()
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
           /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
+          * Calcuate steering value, 
+          * Ensure the steering value is [-1, 1].
           */
-          
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          double max_steer = 1.0;
+          double min_steer = -1.0;
+
+          pid.UpdateError(cte);
+
+          steer_value = pid.TotalError();
+
+          if (steer_value>max_steer)
+          {
+            steer_value = max_steer;
+          }else if (steer_value<min_steer){
+            steer_value = min_steer;
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
@@ -74,7 +95,7 @@ int main()
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }
-  });
+  }); // onMessage end.
 
   // We don't need this since we're not using HTTP but if it's removed the program
   // doesn't compile :-(
