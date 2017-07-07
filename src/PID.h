@@ -15,6 +15,8 @@ public:
 
   void ClearError();
 
+  void SetDeadBand(double deadband);
+
   double UpdateError(double cte);
 
   double TotalError();
@@ -28,6 +30,7 @@ public:
   double kd_m;
 
   double dt_m = 0.1;
+  double deadband_m = 0;
 
   double max_output_m = 1.0, min_output_m = -1.0;
 };

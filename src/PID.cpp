@@ -1,5 +1,5 @@
 #include "PID.h"
-
+#include <cmath>
 using namespace std;
 
 /*
@@ -29,15 +29,21 @@ void PID::ClearError() {
   d_error_m = 0;
 }
 
+void PID::SetDeadBand(double deadband) { deadband_m = deadband; }
+
 double PID::UpdateError(double cte) {
   d_error_m = (cte - p_error_m) / dt_m;
   i_error_m += cte * dt_m;
   p_error_m = cte;
 
+  if (std::abs(cte) < deadband_m)
+    return 0;
+
   double output;
   output = -(kp_m * p_error_m + ki_m * i_error_m + kd_m * d_error_m);
   output = output > max_output_m ? max_output_m : output;
   output = output < min_output_m ? min_output_m : output;
+
   return output;
 }
 

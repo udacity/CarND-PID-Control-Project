@@ -32,8 +32,10 @@ std::string hasData(std::string s) {
   return "";
 }
 
-double kp_g = 0.15, ki_g = 0.00, kd_g = 0.06;
+double kp_g = 0.15, ki_g = 0.00, kd_g = 0.06; // 30mph
+// kp ki kd :( 0.100, 0.000, 0.050 ) for 50mph
 bool clear_error_g = false;
+double deadband_g = 0.0;
 void readCin(std::atomic<bool> &run) {
   std::string input;
   while (run.load()) {
@@ -54,6 +56,9 @@ void readCin(std::atomic<bool> &run) {
         break;
       case 'd':
         kd_g = val;
+        break;
+      case 't':
+        deadband_g = val;
         break;
       }
       printf("kp ki kd :( %.3f, %.3f, %.3f )\n", kp_g, ki_g, kd_g);
@@ -89,10 +94,14 @@ int main() {
           //          std::cout << "Dt = " << diff.count() << "\n";
           start = end;
 
+          //          std::cout << j << "\n";
+
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
+          //          double heading =
+          // std::stod(j[1]["psi"].get<std::string>());
           double steer_value;
 
           // Ingnore the initial inaccurate duration measure
@@ -108,12 +117,13 @@ int main() {
           }
 
           pid.SetPID(kp_g, ki_g, kd_g);
+          pid.SetDeadBand(deadband_g);
 
           steer_value = pid.UpdateError(cte);
 
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value
-                    << std::endl;
+          //          std::cout << "CTE: " << cte << " heading: " << heading <<
+          // std::endl;
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.5;
