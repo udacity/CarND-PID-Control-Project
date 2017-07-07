@@ -7,6 +7,8 @@
 #include <atomic>
 #include <thread>
 
+#include <chrono>
+
 // for convenience
 using json = nlohmann::json;
 
@@ -30,21 +32,20 @@ std::string hasData(std::string s) {
   return "";
 }
 
-std::string input_buffer_g;
-std::string receiver_g;
-bool in_reading_g = false;
-
-double kp_g = 0, ki_g = 0, kd_g = 0;
-
+double kp_g = 0.15, ki_g = 0.00, kd_g = 0.06;
+bool clear_error_g = false;
 void readCin(std::atomic<bool> &run) {
+  std::string input;
   while (run.load()) {
-    std::cout << receiver_g + " > ";
-    getline(std::cin, input_buffer_g);
-    if (input_buffer_g == "quit")
+    std::cout << "> ";
+    getline(std::cin, input);
+    if (input == "quit")
       run.store(false);
-    else if (!input_buffer_g.empty()) {
-      double val = std::stod(input_buffer_g.substr(1));
-      switch (input_buffer_g[0]) {
+    else if (input[0] == 'c') {
+      clear_error_g = true;
+    } else {
+      double val = std::stod(input.substr(1));
+      switch (input[0]) {
       case 'p':
         kp_g = val;
         break;
@@ -55,7 +56,7 @@ void readCin(std::atomic<bool> &run) {
         kd_g = val;
         break;
       }
-      printf("kp ki kd : %.3f %.3f %.3f\n", kp_g, ki_g, kd_g);
+      printf("kp ki kd :( %.3f, %.3f, %.3f )\n", kp_g, ki_g, kd_g);
     }
   }
 }
@@ -64,13 +65,15 @@ int main() {
   uWS::Hub h;
 
   PID pid;
-  pid.Init(kp_g, ki_g, kd_g);
+  pid.Init(0.150, 0.010, 0.060);
 
   std::atomic<bool> run(true);
   std::thread cin_thread(readCin, std::ref(run));
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                     uWS::OpCode opCode) {
+  auto start = std::chrono::high_resolution_clock::now();
+
+  h.onMessage([&pid, &start](uWS::WebSocket<uWS::SERVER> ws, char *data,
+                             size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -80,23 +83,40 @@ int main() {
         auto j = json::parse(s);
         std::string event = j[0].get<std::string>();
         if (event == "telemetry") {
+
+          auto end = std::chrono::high_resolution_clock::now();
+          std::chrono::duration<double> diff = end - start;
+          //          std::cout << "Dt = " << diff.count() << "\n";
+          start = end;
+
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
 
+          // Ingnore the initial inaccurate duration measure
+          if (diff.count() > 1.0)
+            pid.SetDt(0.05);
+          else
+            pid.SetDt(diff.count());
+
+          if (clear_error_g) {
+            std::cout << "Clear PID errors\n";
+            clear_error_g = false;
+            pid.ClearError();
+          }
+
           pid.SetPID(kp_g, ki_g, kd_g);
+
           steer_value = pid.UpdateError(cte);
 
           // DEBUG
-          //          std::cout << "CTE: " << cte << " Steering Value: " <<
-          // steer_value
-          //                    << std::endl;
-
+          std::cout << "CTE: " << cte << " Steering Value: " << steer_value
+                    << std::endl;
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = 0.5;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //          std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

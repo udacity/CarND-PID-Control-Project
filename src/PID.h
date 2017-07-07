@@ -11,6 +11,10 @@ public:
 
   void SetPID(double kp, double ki, double kd);
 
+  void SetDt(double dt);
+
+  void ClearError();
+
   double UpdateError(double cte);
 
   double TotalError();

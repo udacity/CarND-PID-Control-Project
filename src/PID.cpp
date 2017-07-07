@@ -11,18 +11,22 @@ PID::PID() {}
 PID::~PID() {}
 
 void PID::Init(double kp, double ki, double kd) {
-  kp_m = kp;
-  ki_m = ki;
-  kd_m = kd;
-  p_error_m = 0;
-  i_error_m = 0;
-  d_error_m = 0;
+  SetPID(kp, ki, kd);
+  ClearError();
 }
 
 void PID::SetPID(double kp, double ki, double kd) {
   kp_m = kp;
   ki_m = ki;
   kd_m = kd;
+}
+
+void PID::SetDt(double dt) { dt_m = dt; }
+
+void PID::ClearError() {
+  p_error_m = 0;
+  i_error_m = 0;
+  d_error_m = 0;
 }
 
 double PID::UpdateError(double cte) {
