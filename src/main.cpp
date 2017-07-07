@@ -32,8 +32,9 @@ std::string hasData(std::string s) {
   return "";
 }
 
-double kp_g = 0.15, ki_g = 0.00, kd_g = 0.06; // 30mph
+double kp_g = 0.1, ki_g = 0.00, kd_g = 0.05; // 30mph
 // kp ki kd :( 0.100, 0.000, 0.050 ) for 50mph
+// kp ki kd :( 0.150, 0.000, 0.060 ) for 30mph
 bool clear_error_g = false;
 double deadband_g = 0.0;
 void readCin(std::atomic<bool> &run) {
@@ -61,8 +62,8 @@ void readCin(std::atomic<bool> &run) {
         deadband_g = val;
         break;
       }
-      printf("kp ki kd :( %.3f, %.3f, %.3f )\n", kp_g, ki_g, kd_g);
     }
+    printf("kp ki kd :( %.3f, %.3f, %.3f )\n", kp_g, ki_g, kd_g);
   }
 }
 
@@ -70,7 +71,7 @@ int main() {
   uWS::Hub h;
 
   PID pid;
-  pid.Init(0.150, 0.010, 0.060);
+  pid.Init(kp_g, ki_g, kd_g);
 
   std::atomic<bool> run(true);
   std::thread cin_thread(readCin, std::ref(run));
@@ -94,12 +95,13 @@ int main() {
           //          std::cout << "Dt = " << diff.count() << "\n";
           start = end;
 
-          //          std::cout << j << "\n";
+          //  std::cout << j << "\n";
 
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
-          double speed = std::stod(j[1]["speed"].get<std::string>());
-          double angle = std::stod(j[1]["steering_angle"].get<std::string>());
+          // double speed = std::stod(j[1]["speed"].get<std::string>());
+          // double angle =
+          // std::stod(j[1]["steering_angle"].get<std::string>());
           //          double heading =
           // std::stod(j[1]["psi"].get<std::string>());
           double steer_value;
@@ -122,13 +124,13 @@ int main() {
           steer_value = pid.UpdateError(cte);
 
           // DEBUG
-          //          std::cout << "CTE: " << cte << " heading: " << heading <<
+          // std::cout << "CTE: " << cte << " heading: " << heading <<
           // std::endl;
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.5;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          //          std::cout << msg << std::endl;
+          // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
@@ -153,8 +155,11 @@ int main() {
     }
   });
 
-  h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+  h.onConnection([&h, &pid](uWS::WebSocket<uWS::SERVER> ws,
+                            uWS::HttpRequest req) {
     std::cout << "Connected!!!" << std::endl;
+    pid.ClearError();
+    pid.PrintPID();
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,

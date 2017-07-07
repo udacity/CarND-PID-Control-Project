@@ -1,5 +1,6 @@
 #include "PID.h"
 #include <cmath>
+#include <iostream>
 using namespace std;
 
 /*
@@ -31,6 +32,10 @@ void PID::ClearError() {
 
 void PID::SetDeadBand(double deadband) { deadband_m = deadband; }
 
+void PID::PrintPID() {
+  printf("kp ki kd :( %.3f, %.3f, %.3f )\n", kp_m, ki_m, kd_m);
+}
+
 double PID::UpdateError(double cte) {
   d_error_m = (cte - p_error_m) / dt_m;
   i_error_m += cte * dt_m;
@@ -47,4 +52,4 @@ double PID::UpdateError(double cte) {
   return output;
 }
 
-double PID::TotalError() {}
+double PID::TotalError() { return 0; }

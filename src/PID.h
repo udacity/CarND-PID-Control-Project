@@ -17,6 +17,8 @@ public:
 
   void SetDeadBand(double deadband);
 
+  void PrintPID();
+
   double UpdateError(double cte);
 
   double TotalError();
