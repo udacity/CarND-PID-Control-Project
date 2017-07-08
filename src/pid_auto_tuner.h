@@ -70,7 +70,14 @@ class PIDAutoTuner {
 
   void calcParameters();
 
-  double set_point_m;
+  double getKp(const int type);
+
+  double getKi(const int type);
+
+  double getKd(const int type);
+
+  static const char control_type_string_m[ControlType::Size][12];
+
   double noise_band_m;
   bool running;
   double output_osc_m;

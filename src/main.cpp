@@ -34,9 +34,20 @@ std::string hasData(std::string s) {
   return "";
 }
 
-double kp_g = 0.1, ki_g = 0.00, kd_g = 0.05; // 30mph
 // kp ki kd :( 0.100, 0.000, 0.050 ) for 50mph
 // kp ki kd :( 0.150, 0.000, 0.060 ) for 30mph
+//     Kp 0.04537	 Ki 0.02211	 Kd 0.02327
+
+// A(7.8, -1.6) Pu(10.5,4.5) Ku 0.02696
+// P	 Kp 0.01348	 Ki 0.00000	 Kd 0.00000
+// PI	 Kp 0.01213	 Ki 0.00194	 Kd 0.00000
+// PD	 Kp 0.02157	 Ki 0.00000	 Kd 0.02035
+// PID	 Kp 0.01618	 Ki 0.00429	 Kd 0.01526
+// PIR	 Kp 0.01887	 Ki 0.00625	 Kd 0.02137
+// Overshoot	 Kp 0.00890	 Ki 0.00236	 Kd 0.02216
+// NoOvershoot	 Kp 0.00539	 Ki 0.00143	 Kd 0.01343
+
+double kp_g = 0.1, ki_g = 0.001, kd_g = 0.06;
 bool clear_error_g = false;
 double throttle_g = 0;
 double deadband_g = 0.0;
@@ -167,11 +178,12 @@ int main() {
 
   bool auto_tune = false;
   PIDAutoTuner pid_tuner;
-  pid_tuner.setAutoTuneType(PIDAutoTuner::AutoTuneType::ConstantP);
-  pid_tuner.setControlType(PIDAutoTuner::ControlType::PD);
+  pid_tuner.setAutoTuneType(PIDAutoTuner::AutoTuneType::Relay);
+  pid_tuner.setControlType(PIDAutoTuner::ControlType::PID);
   pid_tuner.setP(0.08);
-  pid_tuner.setTrialCount(5);
-  pid_tuner.setNoiseBand(.05);
+  pid_tuner.setOscillate(.1);
+  pid_tuner.setTrialCount(3);
+  pid_tuner.setNoiseBand(0);
 
   h.onMessage([&pid, &start, &auto_tune, &pid_tuner](
       uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -226,6 +238,7 @@ int main() {
           // If auto tunning, it overwrites the steering output
           if (auto_tune) {
             auto_tune = pid_tuner.update(cte, steer_value);
+            steer_value -= 0.44 / 24.56;
             if (auto_tune == false) {
               printf("Auto tune completed\n kp %.4f ki %.4f kd %.4f\n",
                      pid_tuner.getKp(), pid_tuner.getKi(), pid_tuner.getKd());

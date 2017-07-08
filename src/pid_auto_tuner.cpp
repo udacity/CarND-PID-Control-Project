@@ -19,12 +19,21 @@ PIDAutoTuner::PIDAutoTuner() {
   pid_coeff_m[ControlType::NoOvershoot] = PID_Coeff_t{0.2, 0.4, 0.066};
 }
 
+const char PIDAutoTuner::control_type_string_m[ControlType::Size][12]={
+  "P",
+  "PI",
+  "PD",
+  "PID",
+  "PIR",
+  "Overshoot",
+  "NoOvershoot"
+};
+
 bool PIDAutoTuner::update(const double& input, double& output) {
   if (!running) {  // initialize working variables the first time around
-    set_point_m = input;
     running = true;
-    output_origin_m = output;
     // Give it an initial disturbance
+    output_origin_m = output;
     output = output_origin_m + output_osc_m;
     output_prev_m = output;
 
@@ -38,9 +47,9 @@ bool PIDAutoTuner::update(const double& input, double& output) {
 
   // Don't record the MidBand state
   if (state_m != InputState::MidBand) state_prev_m = state_m;
-  if (input > set_point_m + noise_band_m)
+  if (input > noise_band_m)
     state_m = InputState::HighBand;
-  else if (input < set_point_m - noise_band_m)
+  else if (input < - noise_band_m)
     state_m = InputState::LowBand;
   else
     state_m = InputState::MidBand;
@@ -65,7 +74,7 @@ bool PIDAutoTuner::update(const double& input, double& output) {
       if (tune_type_m == AutoTuneType::Relay)
         output = output_origin_m - output_osc_m;
       else if (tune_type_m == AutoTuneType::ConstantP)
-        output = (set_point_m - input) * const_p_m;
+        output = (- input) * const_p_m;
 
       output_prev_m = output;
       break;
@@ -84,9 +93,9 @@ bool PIDAutoTuner::update(const double& input, double& output) {
       }
 
       if (tune_type_m == AutoTuneType::Relay)
-        output = output_origin_m + output_osc_m;
+        output =  output_origin_m + output_osc_m;
       else if (tune_type_m == AutoTuneType::ConstantP)
-        output = (set_point_m - input) * const_p_m;
+        output = (- input) * const_p_m;
 
       output_prev_m = output;
       break;
@@ -106,7 +115,9 @@ bool PIDAutoTuner::update(const double& input, double& output) {
   return true;
 }
 
-double PIDAutoTuner::getKp() { return pid_coeff_m[control_type_m][0] * ku_m; }
+double PIDAutoTuner::getKp() { 
+  return pid_coeff_m[control_type_m][0] * ku_m; 
+}
 
 double PIDAutoTuner::getKi() {
   return pid_coeff_m[control_type_m][1] * ku_m / pu_m;
@@ -114,6 +125,18 @@ double PIDAutoTuner::getKi() {
 
 double PIDAutoTuner::getKd() {
   return pid_coeff_m[control_type_m][2] * ku_m * pu_m;
+}
+
+double PIDAutoTuner::getKp(const int type) { 
+  return pid_coeff_m[type][0] * ku_m; 
+}
+
+double PIDAutoTuner::getKi(const int type) {
+  return pid_coeff_m[type][1] * ku_m / pu_m;
+}
+
+double PIDAutoTuner::getKd(const int type) {
+  return pid_coeff_m[type][2] * ku_m * pu_m;
 }
 
 void PIDAutoTuner::setControlType(const PIDAutoTuner::ControlType& type) {
@@ -149,7 +172,10 @@ void PIDAutoTuner::calcParameters() {
 
   printf("A(%.1f, %.1f) Pu(%.1f,%.1f) Ku %.5f\n", max, min, time_t, time_b,
          ku_m);
-  printf("    Kp %.5f\t Ki %.5f\t Kd %.5f\n", getKp(), getKi(), getKd());
+  for(int i=0;i<ControlType::Size;i++){
+    printf("%s\t Kp %.5f\t Ki %.5f\t Kd %.5f\n",control_type_string_m[i],
+                                                  getKp(i), getKi(i), getKd(i));
+  }
 }
 
 void PIDAutoTuner::setNoiseBand(double Band) { noise_band_m = Band; }
