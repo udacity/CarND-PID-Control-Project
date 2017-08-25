@@ -47,9 +47,9 @@ std::string hasData(std::string s) {
 // Overshoot	 Kp 0.00890	 Ki 0.00236	 Kd 0.02216
 // NoOvershoot	 Kp 0.00539	 Ki 0.00143	 Kd 0.01343
 
-double kp_g = 0.1, ki_g = 0.001, kd_g = 0.06;
+double kp_g = 0.15, ki_g = 0.001, kd_g = 0.06;
 bool clear_error_g = false;
-double throttle_g = 0;
+double throttle_g = 0.3;
 double deadband_g = 0.0;
 std::string tune_command_g;
 void readCin(std::atomic<bool> &run) {
