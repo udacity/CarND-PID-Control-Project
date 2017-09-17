@@ -1,5 +1,9 @@
 #ifndef PID_H
 #define PID_H
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
 
 class PID {
 public:
@@ -10,6 +14,8 @@ public:
   double i_error;
   double d_error;
 
+  double previous_cte;
+  std::fstream parameter_file;
   /*
   * Coefficients
   */ 
@@ -41,6 +47,18 @@ public:
   * Calculate the total PID error.
   */
   double TotalError();
+
+
+  /*
+  * Compute Steering angle.
+  */
+  double ComputeSteer();
+
+  /*
+    * Get paramters from a file
+  */
+  std::vector<float>  GetParamters(std::string file_name);
+
 };
 
 #endif /* PID_H */
