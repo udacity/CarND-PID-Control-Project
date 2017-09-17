@@ -3,7 +3,8 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
-
+#include <ctime>
+#include <math.h>
 // for convenience
 using json = nlohmann::json;
 
@@ -68,13 +69,28 @@ int main()
           pid.UpdateError(cte);
           steer_value = pid.ComputeSteer();
           double throttle;
-          throttle = 0.25 * (1-fabs(steer_value))+0.05;
+          double max_throttle = 0.5;
+          throttle = (max_throttle-0.1) * (1-fabs(steer_value))+0.1;
+
+
+          //compute elapsed time
+          double elpased_time_seconds = pid.ComputeDeltaTime();
+
+          double angle_radian = angle/360.0 * M_PI;
+          double speed_in_mile_per_seconds = speed / 3600.0;
+          double delta_distance = speed_in_mile_per_seconds * elpased_time_seconds;
+          //compte total error
+          double distance = pid.ComputeTotalDistance(delta_distance);
+          pid.TotalError();
+
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+//          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          std::cout << "elapse_time: " << elpased_time_seconds << " speed: " << speed << " angle_radian: " << angle_radian << " speed: " << speed << " delta_dist: " << delta_distance << std::endl;
+          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << " Distance: " << distance << " Error: " << pid.total_error << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3; //throttle; //0.3; //0.3;
+          msgJson["throttle"] = throttle; //0.3; //0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

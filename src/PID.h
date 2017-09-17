@@ -4,6 +4,14 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <string>
+#include <algorithm>
+#include <iterator>
+#include <iostream>
+#include <cassert>
+#include <sstream>
+#include <ctime>
+#include <math.h>
 
 class PID {
 public:
@@ -16,6 +24,9 @@ public:
 
   double previous_cte;
   std::fstream parameter_file;
+  clock_t begin_time;
+  double total_error;
+  double total_distance;
   /*
   * Coefficients
   */ 
@@ -58,6 +69,13 @@ public:
     * Get paramters from a file
   */
   std::vector<float>  GetParamters(std::string file_name);
+
+  /*
+   * Compute the time diff
+   */
+  double ComputeDeltaTime();
+
+  double ComputeTotalDistance(double delta_distance);
 
 };
 
