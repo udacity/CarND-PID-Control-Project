@@ -5,6 +5,8 @@
 #include <math.h>
 #include <ctime>
 #include <math.h>
+#include <chrono>
+
 // for convenience
 using json = nlohmann::json;
 
@@ -31,20 +33,47 @@ std::string hasData(std::string s) {
 
 int main()
 {
-  uWS::Hub h;
 
+  uWS::Hub h;
   PID pid;
+
+
   // TODO: Initialize the pid variable.
 
   // read parameters from a file
-  std::vector<float> params;
-  params=pid.GetParamters("parameters.csv");
+  static const std::vector<float> params = pid.GetParamters("parameters.csv");
+
   //  pid.Init(0.2, 3.0, 0.004);
   //  pid.Init(0.1, 0.0004, 3.0); //best
+  int param_index = params[pid.TWIDDLE_INDEX];
 
-  pid.Init(params[1], params[3], params[2]); //best
 
+  pid.Init(params[pid.KP], params[pid.KI], params[pid.KD]); //best
+  static const auto start_time = std::chrono::system_clock::now();
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+
+    if (pid.initial_command == true){
+      std::cout << "initial" << std::endl;
+      pid.initial_command = false;
+      pid.timer_for_episode.reset();
+      pid.timer_for_command.reset();
+    }
+    //---- Episode Termination Criteria ----
+    //clock_t current_time = clock(); //clock() does not provide a proper time (because this is cpu time?)
+    //double time_duration = double(current_time - pid.begin_time_duration)/(double) CLOCKS_PER_SEC;
+
+    std::cout << "total time=" << pid.timer_for_episode.elapsed() << std::endl;
+
+    auto end_time = std::chrono::system_clock::now(); //You can use chrono in c++11
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    if (elapsed.count()/1000.0 > 70.0){
+      std::cout << "time duration is " << elapsed.count()/1000 << ". This episode is done. Please reset the simulator and restart pid." << std::endl;
+      pid.Twiddle(0.2, pid.total_error);
+      pid.LogData("parameters.csv", params);
+
+      return 1;
+    }
+
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
