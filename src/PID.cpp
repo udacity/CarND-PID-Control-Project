@@ -56,8 +56,8 @@ void PID::Init(double Kp, double Ki, double Kd) {
   this->i_error = 0.0;
   this->d_error = 0.0;
 
-  this->begin_time = clock();
-  this->begin_time_duration = clock();
+//  this->begin_time = clock();
+//  this->begin_time_duration = clock();
   this->timer_for_command.reset();
   this->timer_for_episode.reset();
 
@@ -88,8 +88,8 @@ double PID::ComputeSteer(){
 
 double PID::ComputeDeltaTime(){
   clock_t end_time = clock();
-  double elapsed_time_seconds = double(end_time - this->begin_time)/CLOCKS_PER_SEC;
-  this->begin_time = end_time;
+//  double elapsed_time_seconds = double(end_time - this->begin_time)/CLOCKS_PER_SEC;
+//  this->begin_time = end_time;
 
   double end_time2 = this->timer_for_command.elapsed();
   this->timer_for_command.reset();
@@ -105,32 +105,38 @@ double PID::ComputeDeltaTime(){
 
 double PID::ComputeTotalDistance(double delta_distance){
   this->total_distance += delta_distance;
+  return this->total_distance;
 }
 
 double PID::TotalError() {
   this->total_error += fabs(this->p_error);
+  return this->total_error;
 }
 
 double PID::Twiddle(double tol, double err){
 
   //Twiddle algorithm
   int ti = this->index_for_twiddle;
-
-  this->p[ti] += this->dp[ti];
+  if(this->which_scope_in_twiddle==0){
+    this->p[ti] += this->dp[ti];
+  }
   if((err < this->best_err) && (this->which_scope_in_twiddle==0)){
     this->best_err = err;
-    this->p[ti] *= 1.1;
+    this->dp[ti] *= 1.1;
     this->index_for_twiddle = (this->index_for_twiddle+1)%3;
   }else if((err >= this->best_err) && (this->which_scope_in_twiddle==0)){
-    this->p[ti] -= 2*this->dp[ti];
+    this->p[ti] -= 2.0*this->dp[ti];
     this->which_scope_in_twiddle=1;
+
+    std::cout << this->p[0] << "," << this->p[1] << "," << this->p[2] << "," << this->dp[0] << "," <<  this->dp[1] <<"," <<  this->dp[2] << std::endl;
+
     return this->best_err ;
   }
 
   if(this->which_scope_in_twiddle==1){
     if(err < this->best_err){
       this->best_err = err;
-      this->p[ti] *= 1.1;
+      this->dp[ti] *= 1.1;
     }else{
       this->p[ti] += this->dp[ti];
       this->dp[ti] *= 0.9;
@@ -166,7 +172,8 @@ void PID::LogData(string file_name, std::vector<float> parameter_vector){
     log_file << 70.0 << "," << std::endl;
     log_file.close();
   }
-
+  std::cout << std::endl;
+  std::cout <<"final result is " << this->total_error - 1000.0*this->total_distance << std::endl;
 }
 //Make this tolerance bigger if you are timing out!
 //def twiddle(tol=0.2):

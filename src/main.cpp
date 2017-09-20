@@ -7,6 +7,9 @@
 #include <math.h>
 #include <chrono>
 
+#define DO_TWIDDLE 1
+#define REWARD_SIGNAL_TYPE 1
+
 // for convenience
 using json = nlohmann::json;
 
@@ -45,10 +48,13 @@ int main()
 
   //  pid.Init(0.2, 3.0, 0.004);
   //  pid.Init(0.1, 0.0004, 3.0); //best
-  int param_index = params[pid.TWIDDLE_INDEX];
+//  int param_index = params[pid.TWIDDLE_INDEX];
 
-
-  pid.Init(params[pid.KP], params[pid.KI], params[pid.KD]); //best
+  if(DO_TWIDDLE==1){
+    pid.Init(params[pid.KP], params[pid.KI], params[pid.KD]); //best
+  }else{
+    pid.Init(0.407112,0.0072868,5.39867);
+  }
   static const auto start_time = std::chrono::system_clock::now();
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 
@@ -66,11 +72,16 @@ int main()
 
     auto end_time = std::chrono::system_clock::now(); //You can use chrono in c++11
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-    if (elapsed.count()/1000.0 > 70.0){
+    if ((DO_TWIDDLE==1)&&(elapsed.count()/1000.0 > 70.0)){ //70
       std::cout << "time duration is " << elapsed.count()/1000 << ". This episode is done. Please reset the simulator and restart pid." << std::endl;
-      pid.Twiddle(0.2, pid.total_error);
+      if(REWARD_SIGNAL_TYPE==0){
+        pid.Twiddle(0.2, pid.total_error);
+      }else if(REWARD_SIGNAL_TYPE==1){
+        double reward_signal = pid.total_error - 1000.0*pid.total_distance;
+        pid.Twiddle(0.2, reward_signal);
+      }
       pid.LogData("parameters.csv", params);
-
+      exit (EXIT_FAILURE);
       return 1;
     }
 
@@ -99,22 +110,22 @@ int main()
           steer_value = pid.ComputeSteer();
           double throttle;
           double max_throttle = 0.5;
-          throttle = (max_throttle-0.1) * (1-fabs(steer_value))+0.1;
-
+          throttle = (max_throttle-0.1) * (1-fabs(steer_value))+0.1; //used for training
+//          throttle = (0.3-0.1) * (1-fabs(steer_value))+0.1;
 
           //compute elapsed time
-          double elpased_time_seconds = pid.ComputeDeltaTime();
+          double elapsed_time_seconds = pid.ComputeDeltaTime();
 
           double angle_radian = angle/360.0 * M_PI;
           double speed_in_mile_per_seconds = speed / 3600.0;
-          double delta_distance = speed_in_mile_per_seconds * elpased_time_seconds;
+          double delta_distance = speed_in_mile_per_seconds * elapsed_time_seconds;
           //compte total error
           double distance = pid.ComputeTotalDistance(delta_distance);
           pid.TotalError();
 
           // DEBUG
 //          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-          std::cout << "elapse_time: " << elpased_time_seconds << " speed: " << speed << " angle_radian: " << angle_radian << " speed: " << speed << " delta_dist: " << delta_distance << std::endl;
+          std::cout << "elapse_time: " << elapsed_time_seconds << " speed: " << speed << " angle_radian: " << angle_radian << " speed: " << speed << " delta_dist: " << delta_distance << std::endl;
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << " Distance: " << distance << " Error: " << pid.total_error << std::endl;
 
           json msgJson;
