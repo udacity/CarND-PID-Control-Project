@@ -16,10 +16,11 @@
 #include <ctime>
 
 
-
+//The Timer Class
+//References:
 //https://stackoverflow.com/questions/728068/how-to-calculate-a-time-difference-in-c
 //https://gist.github.com/gongzhitaao/7062087
-class Timer
+class Timer //(C++11)
 {
 public:
     Timer() : beg_(clock_::now()) {}
@@ -33,7 +34,7 @@ private:
     typedef std::chrono::duration<double, std::ratio<1> > second_;
     std::chrono::time_point<clock_> beg_;
 };
-//class Timer
+//class Timer (C++03)
 //{
 //public:
 //    Timer() { clock_gettime(CLOCK_REALTIME, &beg_); }
@@ -133,10 +134,19 @@ public:
    */
   double ComputeDeltaTime();
 
+  /*
+   * Compute the total distance the vehicle drove
+   */
   double ComputeTotalDistance(double delta_distance);
 
+  /*
+   * Parameter tuning using twiddle
+   */
   double Twiddle(double tol, double err);
 
+  /*
+   * Save parameters and errors after each episode
+   */
   void LogData(std::string file_name, std::vector<float> parameter_vector);
 
 };

@@ -7,7 +7,7 @@
 #include <math.h>
 #include <chrono>
 
-#define DO_TWIDDLE 1
+#define DO_TWIDDLE 0 //1---> Training, 0--->Testing
 #define REWARD_SIGNAL_TYPE 1
 
 // for convenience
@@ -46,14 +46,11 @@ int main()
   // read parameters from a file
   static const std::vector<float> params = pid.GetParamters("parameters.csv");
 
-  //  pid.Init(0.2, 3.0, 0.004);
-  //  pid.Init(0.1, 0.0004, 3.0); //best
-//  int param_index = params[pid.TWIDDLE_INDEX];
 
   if(DO_TWIDDLE==1){
-    pid.Init(params[pid.KP], params[pid.KI], params[pid.KD]); //best
+    pid.Init(params[pid.KP], params[pid.KI], params[pid.KD]);
   }else{
-    pid.Init(0.407112,0.0072868,5.39867);
+    pid.Init(0.21, 0.00399995, 3.16046);
   }
   static const auto start_time = std::chrono::system_clock::now();
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -70,6 +67,9 @@ int main()
 
     std::cout << "total time=" << pid.timer_for_episode.elapsed() << std::endl;
 
+    /*
+     * In training, each episode is 70 seconds. After that the program automatically shuts off.
+     */
     auto end_time = std::chrono::system_clock::now(); //You can use chrono in c++11
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     if ((DO_TWIDDLE==1)&&(elapsed.count()/1000.0 > 70.0)){ //70
@@ -109,23 +109,27 @@ int main()
           pid.UpdateError(cte);
           steer_value = pid.ComputeSteer();
           double throttle;
-          double max_throttle = 0.5;
+          double max_throttle = 0.3; //0.5 was used for training
+
+          /*
+           * throttle is adjuated based on the current steering angle.
+           */
           throttle = (max_throttle-0.1) * (1-fabs(steer_value))+0.1; //used for training
-//          throttle = (0.3-0.1) * (1-fabs(steer_value))+0.1;
 
           //compute elapsed time
           double elapsed_time_seconds = pid.ComputeDeltaTime();
 
+          //Compute the travel distance
           double angle_radian = angle/360.0 * M_PI;
           double speed_in_mile_per_seconds = speed / 3600.0;
           double delta_distance = speed_in_mile_per_seconds * elapsed_time_seconds;
+
           //compte total error
           double distance = pid.ComputeTotalDistance(delta_distance);
           pid.TotalError();
 
           // DEBUG
-//          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-          std::cout << "elapse_time: " << elapsed_time_seconds << " speed: " << speed << " angle_radian: " << angle_radian << " speed: " << speed << " delta_dist: " << delta_distance << std::endl;
+          std::cout << "Delta time: " << elapsed_time_seconds << " speed: " << speed << " angle_radian: " << angle_radian << " delta_dist: " << delta_distance << std::endl;
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << " Distance: " << distance << " Error: " << pid.total_error << std::endl;
 
           json msgJson;

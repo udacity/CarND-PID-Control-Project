@@ -15,8 +15,7 @@ std::vector<float> PID::GetParamters(string file_name){
   string lastline;
   std::vector<float> parameter_vector;
 
-
-  //get the last line
+  //get the last line of the csv file
   this->parameter_file.open(file_name);
   while (getline (this->parameter_file,line))
   {
@@ -30,9 +29,6 @@ std::vector<float> PID::GetParamters(string file_name){
   while(std::getline(iss, token, ',')) {
       parameter_vector.push_back(stof(token));
   }
-//  for(int i =0; i< parameter_vector.size(); i++){
-//    cout << parameter_vector[i] << endl;
-//  }
   this->parameter_file.close();
 
   this->p[0]  = parameter_vector[this->KP];
@@ -56,8 +52,6 @@ void PID::Init(double Kp, double Ki, double Kd) {
   this->i_error = 0.0;
   this->d_error = 0.0;
 
-//  this->begin_time = clock();
-//  this->begin_time_duration = clock();
   this->timer_for_command.reset();
   this->timer_for_episode.reset();
 
@@ -71,13 +65,10 @@ void PID::UpdateError(double cte) {
   this->d_error = cte - this->p_error;
   this->p_error = cte;
   this->i_error += cte;
-//  steer = -tau_p*cte  - tau_d * v - tau_i * int_cte
-//  cout<< "CTE=" << cte << "," <<  p_error << "," << d_error << "," << i_error << std::endl;
 }
 
 double PID::ComputeSteer(){
   double steer = (-this->Kp*this->p_error)  - (this->Kd * this->d_error) - (this->Ki * this->i_error);
-//  cout << "original steer = " << steer << endl;
   if (steer < -1.0){
     steer = -1.0;
   }else if(steer > 1.0){
@@ -87,20 +78,13 @@ double PID::ComputeSteer(){
 }
 
 double PID::ComputeDeltaTime(){
-  clock_t end_time = clock();
+//  clock_t end_time = clock();
 //  double elapsed_time_seconds = double(end_time - this->begin_time)/CLOCKS_PER_SEC;
 //  this->begin_time = end_time;
 
   double end_time2 = this->timer_for_command.elapsed();
   this->timer_for_command.reset();
-
-//  double diff = end_time2 - start_time;
-//  this->start_time = end_time2;
-
-  std::cout << "time=" << end_time2 << std::endl;
-
   return end_time2;
-//  return elapsed_time_seconds;
 }
 
 double PID::ComputeTotalDistance(double delta_distance){
@@ -175,40 +159,3 @@ void PID::LogData(string file_name, std::vector<float> parameter_vector){
   std::cout << std::endl;
   std::cout <<"final result is " << this->total_error - 1000.0*this->total_distance << std::endl;
 }
-//Make this tolerance bigger if you are timing out!
-//def twiddle(tol=0.2):
-//    # Don't forget to call `make_robot` before every call of `run`!
-//    p = [0, 0, 0]
-//    dp = [1, 1, 1]
-//    robot = make_robot()
-//    x_trajectory, y_trajectory, best_err = run(robot, p)
-//
-//    it = 0
-//    while sum(dp) > tol:
-//        print("Iteration {}, best error = {}".format(it, best_err))
-//        for i in range(len(p)):
-//            p[i] += dp[i]
-//            robot = make_robot()
-//            x_trajectory, y_trajectory, err = run(robot, p)
-//
-//            if err < best_err:
-//                best_err = err
-//                dp[i] *= 1.1
-//            else:
-//                p[i] -= 2 * dp[i]
-//                robot = make_robot()
-//                x_trajectory, y_trajectory, err = run(robot, p)
-//
-//                if err < best_err:
-//                    best_err = err
-//                    dp[i] *= 1.1
-//                else:
-//                    p[i] += dp[i]
-//                    dp[i] *= 0.9
-//        it += 1
-//
-//    # TODO: twiddle loop here
-//
-//    return p, best_err
-//
-//
