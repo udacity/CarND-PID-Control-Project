@@ -3,6 +3,12 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+#include <ctime>
+#include <math.h>
+#include <chrono>
+
+#define DO_TWIDDLE 0 //1---> Training, 0--->Testing
+#define REWARD_SIGNAL_TYPE 1
 
 // for convenience
 using json = nlohmann::json;
@@ -30,12 +36,56 @@ std::string hasData(std::string s) {
 
 int main()
 {
-  uWS::Hub h;
 
+  uWS::Hub h;
   PID pid;
+
+
   // TODO: Initialize the pid variable.
 
+  // read parameters from a file
+  static const std::vector<float> params = pid.GetParamters("parameters.csv");
+
+
+  if(DO_TWIDDLE==1){
+    pid.Init(params[pid.KP], params[pid.KI], params[pid.KD]);
+  }else{
+    pid.Init(0.21, 0.00399995, 3.16046);
+  }
+  static const auto start_time = std::chrono::system_clock::now();
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+
+    if (pid.initial_command == true){
+      std::cout << "initial" << std::endl;
+      pid.initial_command = false;
+      pid.timer_for_episode.reset();
+      pid.timer_for_command.reset();
+    }
+    //---- Episode Termination Criteria ----
+    //clock_t current_time = clock(); //clock() does not provide a proper time (because this is cpu time?)
+    //double time_duration = double(current_time - pid.begin_time_duration)/(double) CLOCKS_PER_SEC;
+
+    std::cout << "total time=" << pid.timer_for_episode.elapsed() << std::endl;
+
+    /*
+     * In training, each episode is 70 seconds. After that the program automatically shuts off.
+     *
+     */
+    auto end_time = std::chrono::system_clock::now(); //You can use chrono in c++11
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    if ((DO_TWIDDLE==1)&&(elapsed.count()/1000.0 > 70.0)){ //70
+      std::cout << "time duration is " << elapsed.count()/1000 << ". This episode is done. Please reset the simulator and restart pid." << std::endl;
+      if(REWARD_SIGNAL_TYPE==0){
+        pid.Twiddle(0.2, pid.total_error);
+      }else if(REWARD_SIGNAL_TYPE==1){
+        double reward_signal = pid.total_error - 1000.0*pid.total_distance;
+        pid.Twiddle(0.2, reward_signal);
+      }
+      pid.LogData("parameters.csv", params);
+      exit (EXIT_FAILURE);
+      return 1;
+    }
+
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -57,13 +107,35 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          
+          pid.UpdateError(cte);
+          steer_value = pid.ComputeSteer();
+          double throttle;
+          double max_throttle = 0.3; //0.5 was used for training
+
+          /*
+           * throttle is adjuated based on the current steering angle.
+           */
+          throttle = (max_throttle-0.1) * (1-fabs(steer_value))+0.1; //used for training
+
+          //compute elapsed time
+          double elapsed_time_seconds = pid.ComputeDeltaTime();
+
+          //Compute the travel distance
+          double angle_radian = angle/360.0 * M_PI;
+          double speed_in_mile_per_seconds = speed / 3600.0;
+          double delta_distance = speed_in_mile_per_seconds * elapsed_time_seconds;
+
+          //compte total error
+          double distance = pid.ComputeTotalDistance(delta_distance);
+          pid.TotalError();
+
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          std::cout << "Delta time: " << elapsed_time_seconds << " speed: " << speed << " angle_radian: " << angle_radian << " delta_dist: " << delta_distance << std::endl;
+          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << " Distance: " << distance << " Error: " << pid.total_error << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = throttle; //0.3; //0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
