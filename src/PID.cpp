@@ -16,30 +16,36 @@ std::vector<float> PID::GetParamters(string file_name){
   std::vector<float> parameter_vector;
 
   //get the last line of the csv file
-  this->parameter_file.open(file_name);
-  while (getline (this->parameter_file,line))
-  {
-     lastline=line;
+  this->parameter_file.exceptions(ifstream::failbit | ifstream::badbit);
+
+  try{
+    this->parameter_file.open(file_name);
+    while (getline (this->parameter_file,line))
+    {
+       lastline=line;
+    }
+
+    //split the last line into parameter_vector
+    std::istringstream iss(lastline);
+    std::string token;
+
+    while(std::getline(iss, token, ',')) {
+        parameter_vector.push_back(stof(token));
+    }
+    this->parameter_file.close();
+
+    this->p[0]  = parameter_vector[this->KP];
+    this->p[1]  = parameter_vector[this->KD];
+    this->p[2]  = parameter_vector[this->KI];
+    this->dp[0] = parameter_vector[this->DKP];
+    this->dp[1] = parameter_vector[this->DKD];
+    this->dp[2] = parameter_vector[this->DKI];
+    this->index_for_twiddle = parameter_vector[this->TWIDDLE_INDEX];
+    this->which_scope_in_twiddle = parameter_vector[this->WHICH_SCOPE];
+    this->best_err = parameter_vector[this->BEST_ERROR];
+  }catch (const fstream::failure& error) {
+    cout << "Fail to open the csv file. You need to create " << file_name << "in ./build." << endl;
   }
-
-  //split the last line into parameter_vector
-  std::istringstream iss(lastline);
-  std::string token;
-
-  while(std::getline(iss, token, ',')) {
-      parameter_vector.push_back(stof(token));
-  }
-  this->parameter_file.close();
-
-  this->p[0]  = parameter_vector[this->KP];
-  this->p[1]  = parameter_vector[this->KD];
-  this->p[2]  = parameter_vector[this->KI];
-  this->dp[0] = parameter_vector[this->DKP];
-  this->dp[1] = parameter_vector[this->DKD];
-  this->dp[2] = parameter_vector[this->DKI];
-  this->index_for_twiddle = parameter_vector[this->TWIDDLE_INDEX];
-  this->which_scope_in_twiddle = parameter_vector[this->WHICH_SCOPE];
-  this->best_err = parameter_vector[this->BEST_ERROR];
   return parameter_vector;
 }
 

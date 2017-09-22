@@ -69,6 +69,7 @@ int main()
 
     /*
      * In training, each episode is 70 seconds. After that the program automatically shuts off.
+     *
      */
     auto end_time = std::chrono::system_clock::now(); //You can use chrono in c++11
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
