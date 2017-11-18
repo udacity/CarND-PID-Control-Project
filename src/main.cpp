@@ -1,8 +1,14 @@
 #include <uWS/uWS.h>
 #include <iostream>
+#include <fstream>
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+
+#define CMDLINE 1
+#define DEBUG 1
+
+using namespace std;
 
 // for convenience
 using json = nlohmann::json;
@@ -28,14 +34,40 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int main()
+int main(int argc, char *argv[])
 {
   uWS::Hub h;
 
   PID pid;
-  // TODO: Initialize the pid variable.
+  double throttle_cmd;
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+//  double  P[3]={0.,0.,0.}; // 0.2, 0.004, 3.0 //P I D
+//  double  P[3] = { 0.12, 0.001, 1.5}; //good for 0.3 throttle
+//  double  P[3] = { 0.02, 0.002, 0.5}; //test 0.6 throttle
+#if (CMDLINE)
+  if (argc == 1) {
+	  pid.Init(0.12, 0.001, 1.1, .05, 100);
+	  throttle_cmd = 0.3;
+  } else if (argc == 5) {
+	  pid.Init(atof(argv[1]), atof(argv[2]), atof(argv[3]), .05, 100);
+	  throttle_cmd = atof(argv[4]);
+  } else if (argc != 5) {
+	  std::cout << "Too few or too many arguments.\n";
+	  std::cout << "Use:\n";
+	  std::cout << "./pid Kp Ki Kd throttle_cmd\n";
+	  return -1;
+  }
+
+#else
+  pid.Init(0.12, 0.001, 1.5);
+  throttle_cmd = 0.3;
+#endif
+
+#if (DEBUG)
+  cout << "cte" << ", " << "pid.p_error" << ", " << "pid.i_error" << ", " << "pid.d_error" << ", " << "steer_value" << endl;
+#endif
+
+  h.onMessage([&pid, throttle_cmd](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -57,15 +89,21 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          
+		  //  Should cte be filtered a bit?
+          pid.UpdateError(cte);
+		  steer_value = pid.TotalError();
+		  steer_value=std::max(std::min(steer_value,1.), -1.);  // limit to [-1,1]
+#if (DEBUG)
+		  cout << cte << ", " << pid.p_error << ", " << pid.i_error << ", " << pid.d_error << ", " << steer_value << endl;
+#endif
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+//          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+		  msgJson["throttle"] = throttle_cmd; // 0.6; // 0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+//          std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {

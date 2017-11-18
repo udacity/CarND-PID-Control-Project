@@ -6,8 +6,13 @@ public:
   /*
   * Errors
   */
+  /* Proportional Error */
   double p_error;
-  double i_error;
+
+  /* Integral Error */
+  double i_error, i_error_pos, i_error_neg;
+
+  /* Derivative Error */
   double d_error;
 
   /*
@@ -16,6 +21,9 @@ public:
   double Kp;
   double Ki;
   double Kd;
+
+  double i_deadband;
+  double antiwindup_lim;
 
   /*
   * Constructor
@@ -30,7 +38,7 @@ public:
   /*
   * Initialize PID.
   */
-  void Init(double Kp, double Ki, double Kd);
+  void Init(double Kp, double Ki, double Kd, double i_deadband, double antiwindup_lim);
 
   /*
   * Update the PID error variables given cross track error.
@@ -41,6 +49,7 @@ public:
   * Calculate the total PID error.
   */
   double TotalError();
+
 };
 
 #endif /* PID_H */
