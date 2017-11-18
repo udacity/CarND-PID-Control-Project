@@ -5,8 +5,8 @@
 #include "PID.h"
 #include <math.h>
 
-#define CMDLINE 1
-#define DEBUG 1
+#define DEBUG 0
+#define TARGET_SPEED 32.
 
 using namespace std;
 
@@ -38,36 +38,13 @@ int main(int argc, char *argv[])
 {
   uWS::Hub h;
 
-  PID pid;
-  double throttle_cmd;
+  PID ctrl_steer;  // steering controller
+  PID ctrl_speed;  // speed controller
 
-//  double  P[3]={0.,0.,0.}; // 0.2, 0.004, 3.0 //P I D
-//  double  P[3] = { 0.12, 0.001, 1.5}; //good for 0.3 throttle
-//  double  P[3] = { 0.02, 0.002, 0.5}; //test 0.6 throttle
-#if (CMDLINE)
-  if (argc == 1) {
-	  pid.Init(0.12, 0.001, 1.1, .05, 100);
-	  throttle_cmd = 0.3;
-  } else if (argc == 5) {
-	  pid.Init(atof(argv[1]), atof(argv[2]), atof(argv[3]), .05, 100);
-	  throttle_cmd = atof(argv[4]);
-  } else if (argc != 5) {
-	  std::cout << "Too few or too many arguments.\n";
-	  std::cout << "Use:\n";
-	  std::cout << "./pid Kp Ki Kd throttle_cmd\n";
-	  return -1;
-  }
+  ctrl_steer.Init(0.12, 0.001, 1.1, .05, 100.);
+  ctrl_speed.Init(0.075, 0.0001, 0., 0., 0.);
 
-#else
-  pid.Init(0.12, 0.001, 1.5);
-  throttle_cmd = 0.3;
-#endif
-
-#if (DEBUG)
-  cout << "cte" << ", " << "pid.p_error" << ", " << "pid.i_error" << ", " << "pid.d_error" << ", " << "steer_value" << endl;
-#endif
-
-  h.onMessage([&pid, throttle_cmd](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&ctrl_steer, &ctrl_speed](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -83,21 +60,28 @@ int main(int argc, char *argv[])
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
-		  //  Should cte be filtered a bit?
-          pid.UpdateError(cte);
-		  steer_value = pid.TotalError();
+		  double throttle_cmd;
+
+		  // DO STEER CONTROL
+		  ctrl_steer.UpdateError(cte);
+		  steer_value = ctrl_steer.TotalError();
 		  steer_value=std::max(std::min(steer_value,1.), -1.);  // limit to [-1,1]
 #if (DEBUG)
-		  cout << cte << ", " << pid.p_error << ", " << pid.i_error << ", " << pid.d_error << ", " << steer_value << endl;
-#endif
+		  cout << cte << ", " << ctrl_steer.p_error << ", " << ctrl_steer.i_error << ", " << ctrl_steer.d_error << ", " << steer_value << ", "; // there is more below
+
           // DEBUG
-//          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          //std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+#endif
+		  // DO SPEED CONTROL
+		  ctrl_speed.UpdateError(speed-TARGET_SPEED);
+		  throttle_cmd = ctrl_speed.TotalError();
+
+#if (DEBUG)
+		  cout << (speed - TARGET_SPEED) << ", " << ctrl_speed.p_error << ", " << ctrl_speed.i_error << ", " << ctrl_speed.d_error << ", " << throttle_cmd << endl;
+
+		  // DEBUG
+		  //std::cout << "speed_error: " << (speed - TARGET_SPEED) << " Throttle Command: " << throttle_cmd << std::endl;
+#endif
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;

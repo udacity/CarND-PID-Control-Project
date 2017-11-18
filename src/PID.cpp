@@ -20,21 +20,21 @@ void PID::Init(double Kp, double Ki, double Kd, double i_deadband, double antiwi
 
 }
 
-void PID::UpdateError(double cte) {
+void PID::UpdateError(double error) {
 
-	d_error= cte-p_error;
-	p_error=cte;
+	d_error= error-p_error;
+	p_error=error;
 
-	// getting clever here with deadband and reset at cte zero crossing
-	if (cte>i_deadband) { // positive
-		i_error_pos += cte-i_deadband;
+	// getting clever here with deadband and reset at error zero crossing
+	if (error>i_deadband) { // positive
+		i_error_pos += error-i_deadband;
 		if (i_error_pos > antiwindup_lim) {
 			i_error_pos = antiwindup_lim;
 		}
 		i_error_neg = 0.;
 		i_error=i_error_pos;
-	} else if (cte<-i_deadband) {
-		i_error_neg += cte+i_deadband;
+	} else if (error<-i_deadband) {
+		i_error_neg += error+i_deadband;
 		if (i_error_pos < -antiwindup_lim) {
 			i_error_pos = -antiwindup_lim;
 		}
