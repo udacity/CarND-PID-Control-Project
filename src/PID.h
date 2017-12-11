@@ -2,7 +2,7 @@
 #define PID_H
 
 class PID {
-public:
+private:
   /*
   * Errors
   */
@@ -17,20 +17,18 @@ public:
   double Ki;
   double Kd;
 
+  double cap;
+
+public:
   /*
   * Constructor
   */
-  PID();
+  PID( double Kp, double Ki, double Kd, double cap);
 
   /*
   * Destructor.
   */
   virtual ~PID();
-
-  /*
-  * Initialize PID.
-  */
-  void Init(double Kp, double Ki, double Kd);
 
   /*
   * Update the PID error variables given cross track error.
