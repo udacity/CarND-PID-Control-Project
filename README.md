@@ -7,7 +7,7 @@ Self-Driving Car Engineer Nanodegree Program
 
 * cmake >= 3.5
  * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
+* make >= 4.1(mac, linux), 3.81(Windows)
   * Linux: make is installed by default on most Linux distros
   * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
   * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
@@ -15,10 +15,18 @@ Self-Driving Car Engineer Nanodegree Program
   * Linux: gcc / g++ is installed by default on most Linux distros
   * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
   * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets) == 0.13, but the master branch will probably work just fine
-  * Follow the instructions in the [uWebSockets README](https://github.com/uWebSockets/uWebSockets/blob/master/README.md) to get setup for your platform. You can download the zip of the appropriate version from the [releases page](https://github.com/uWebSockets/uWebSockets/releases). Here's a link to the [v0.13 zip](https://github.com/uWebSockets/uWebSockets/archive/v0.13.0.zip).
-  * If you run OSX and have homebrew installed you can just run the ./install-mac.sh script to install this
-* Simulator. You can download these from the [project intro page](https://github.com/udacity/CarND-PID-Control-Project/releases) in the classroom.
+* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
+  * Run either `./install-mac.sh` or `./install-ubuntu.sh`.
+  * If you install from source, checkout to commit `e94b6e1`, i.e.
+    ```
+    git clone https://github.com/uWebSockets/uWebSockets 
+    cd uWebSockets
+    git checkout e94b6e1
+    ```
+    Some function signatures have changed in v0.14.x. See [this PR](https://github.com/udacity/CarND-MPC-Project/pull/3) for more details.
+* Simulator. You can download these from the [project intro page](https://github.com/udacity/self-driving-car-sim/releases) in the classroom.
+
+There's an experimental patch for windows in this [PR](https://github.com/udacity/CarND-PID-Control-Project/pull/3)
 
 ## Basic Build Instructions
 
@@ -36,6 +44,8 @@ Self-Driving Car Engineer Nanodegree Program
 5. Open CMakeSetting.json, check if `C:/vcpkg/scripts/buildsystems/vcpkg.cmake` is the correct directory to your vcpkg and `DCMAKE_TOOLCHAIN_FILE` matches the output from vcpkg integrate.
 6. Open in VS17 community edition, build pid.exe in x86 debug.
 
+
+Tips for setting up your environment can be found [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
 
 ## Editor Settings
 
@@ -92,3 +102,7 @@ that's just a guess.
 
 One last note here: regardless of the IDE used, every submitted project must
 still be compilable with cmake and make./
+
+## How to write a README
+A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+

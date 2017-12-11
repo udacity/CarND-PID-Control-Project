@@ -1,6 +1,7 @@
 project(PID)
 cmake_minimum_required (VERSION 3.5)
 add_definitions(-std=c++11)
+
 set(CXX_FLAGS "-W1")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -18,6 +19,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     link_directories(/usr/local/lib)
     link_directories(/usr/local/opt/openssl/lib)
     link_directories(/usr/local/Cellar/libuv/1.11.0/lib)
+    
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 add_executable(pid ${sources})
 if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
