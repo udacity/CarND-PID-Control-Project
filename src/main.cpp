@@ -34,6 +34,61 @@ int main()
 
   PID pid;
   // TODO: Initialize the pid variable.
+  // Optimize hyper parameters
+  // Climping to the left, back and climbing to the right - need reduce the P
+  //pid.Init(0.5, 0.5, 0.5);
+  
+  // The same error - climb to left - back - right
+  //pid.Init(0.3, 0.5, 0.5);
+  // It's not better
+  //pid.Init(0.3, 0.25, 0.5);
+  // does not help
+  //pid.Init(0.2, 0.25, 0.5);
+  // Better but stopped before the bridge and go zig zac
+  //pid.Init(0.2, 0.0, 0.5);
+  // better a little - can go almost near the bridge with less zig zac
+  //pid.Init(0.2, 0.0, 1.0);
+  // Much better - can finish a round but move like a snake - zig zac
+  //pid.Init(0.2, 0.0, 1.5);
+  // Completed round with some zig zac
+  //pid.Init(0.2, 0.0, 2.0);
+  // improve - completed round with a little zig zac on the curve
+  //pid.Init(0.2, 0.0, 2.5);
+  // more zig zac than 0.2, 0.0, 2.5
+  // pid.Init(0.2, 0.0, 3.0);
+  // Would like the car in the center
+  // more center but still zig zac
+  //pid.Init(0.3, 0.0, 2.75);
+  // better with a little zig zac on the curve
+  //pid.Init(0.25, 0.0, 2.5);
+  // Cannot complete
+  //pid.Init(0.25, 0.1, 2.5);
+  // OH NO
+  //pid.Init(0.25, 0.05, 2.5);
+  // OH NO
+  //pid.Init(0.25, 0.01, 2.5);
+  // Can complete round with zig zac
+  //pid.Init(0.25, 0.0004, 2.5);
+  // more zig zac
+  //pid.Init(0.25, 0.001, 2.5);
+  // a little improve on zig zac
+  //pid.Init(0.25, 0.0004, 2.2);
+  // continue improve
+  //pid.Init(0.23, 0.0004, 2.2);
+  // more zig zac
+  //pid.Init(0.23, 0.0002, 2.2);
+  // more zig zac
+  //pid.Init(0.23, 0.0004, 2.0);
+  // a little less zig zac
+  //pid.Init(0.23, 0.0004, 2.4);
+  // a little improvement
+  //pid.Init(0.22, 0.0004, 2.4);
+  //pid.Init(0.224, 0.0004, 2.4);
+  // ZIG ZAC
+ // pid.Init(0.224, 0.0004, 2.2);
+  //pid.Init(0.224, 0.0004, 2.3);
+  pid.Init(0.224, 0.0004, 2.4);
+  //pid.Init(0.25, 0.0, 2.5);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -57,13 +112,28 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          
+          pid.UpdateError(cte);
+          steer_value = pid.TotalError();
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          // Play around with the throttle and speed
+          double throttle = 0.2;
+          if(fabs(steer_value) < 0.1) {
+            if(speed < 35) {
+              throttle = 0.5;
+            } else {
+              throttle = 0.3;
+            }
+          } else if(fabs(steer_value) > 0.5) {
+            if(speed > 30)
+              throttle = -0.3;
+            else
+              throttle = 0.1;
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
