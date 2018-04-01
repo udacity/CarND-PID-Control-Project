@@ -42,6 +42,7 @@ enum Opt {
   kOptThrottleTauP,
   kOptThrottleTauI,
   kOptThrottleTauD,
+  kOptMaxSpeed,
   kOptThrottle,
   kOptJournalFile,
 };
@@ -55,6 +56,7 @@ Opt GetOpt(const std::string &opt) {
   if (opt == "-tp") return kOptThrottleTauP;
   if (opt == "-ti") return kOptThrottleTauI;
   if (opt == "-td") return kOptThrottleTauD;
+  if (opt == "--max-speed") return kOptMaxSpeed;
   if (opt == "--throttle") return kOptThrottle;
   if (opt == "--journal") return kOptJournalFile;
   return kOptUnknown;
@@ -68,6 +70,7 @@ void Help() {
   std::cout << "    -p tau_p" << std::endl;
   std::cout << "    -i tau_i" << std::endl;
   std::cout << "    -d tau_d" << std::endl;
+  std::cout << "    --max-speed SPEED" << std::endl;
   std::cout << "Throttle PID options:" << std::endl;
   std::cout << "    -tp tau_p" << std::endl;
   std::cout << "    -ti tau_i" << std::endl;
@@ -96,9 +99,10 @@ int main(int argc, char **argv)
 {
   uWS::Hub h;
 
-  double tau_p = 0.08, tau_i = 0.01, tau_d = 0.5;
+  double tau_p = 0.06, tau_i = 0.001, tau_d = 0.6;
   double t_tau_p = 100000, t_tau_i = 0, t_tau_d = 10000;
-  double max_throttle = 0.6;
+  double max_throttle = 0.8;
+  double max_speed = 45;
 
   bool use_journal = false;
   std::string journal_file_name = "";
@@ -143,6 +147,11 @@ int main(int argc, char **argv)
       t_tau_d = atof(argv[i]);
       break;
 
+    case kOptMaxSpeed:
+      i = shift(argc, i);
+      max_speed = atof(argv[i]);
+      break;
+
     case kOptThrottle:
       i = shift(argc, i);
       max_throttle = atof(argv[i]);
@@ -179,7 +188,7 @@ int main(int argc, char **argv)
   PID t_pid(t_tau_p, t_tau_i, t_tau_d);
   std::cout << "Use Throttle PID " << t_tau_p << ", " << t_tau_i << ", " << t_tau_d << std::endl;
 
-  h.onMessage([&pid, &t_pid, &journal, max_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&pid, &t_pid, &journal, max_speed, max_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -205,7 +214,12 @@ int main(int argc, char **argv)
 	    steer_value = -1.0;
 	  }
 
-	  double throttle = max_throttle - pid.TotalError();
+	  double throttle_factor = speed / max_speed;
+	  if (throttle_factor < 0.001) {
+	    throttle_factor = 0.001;
+	  }
+	  throttle_factor = std::max(1.0, 1.5 * throttle_factor);
+	  double throttle = (1 / throttle_factor)  * (max_throttle - pid.TotalError());
 	  if (throttle > max_throttle) {
 	    throttle = max_throttle;
 	  } else if (throttle < -max_throttle) {

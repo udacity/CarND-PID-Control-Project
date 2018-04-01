@@ -13,7 +13,6 @@ PID::PID(double tau_p, double tau_i, double tau_d)
   tau_[kD] = tau_d;
 }
 
-
 void PID::UpdateError(double cte) {
   d_cte_ = cte - p_cte_;
   p_cte_ = cte;
