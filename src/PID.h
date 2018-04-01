@@ -36,9 +36,6 @@ public:
   * Calculate the total PID error.
   */
   double TotalError();
-
-private:
-  void Twiddle(const double tolerance);
 };
 
 #endif /* PID_H */
