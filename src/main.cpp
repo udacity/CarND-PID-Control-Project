@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 {
   uWS::Hub h;
 
-  double tau_p = 0.2, tau_i = 0.0003, tau_d = 3.0;
+  double tau_p = 0.08, tau_i = 0.01, tau_d = 0.5;
 
   bool use_journal = false;
   std::string journal_file_name = "";
