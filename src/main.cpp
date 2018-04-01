@@ -99,10 +99,10 @@ int main(int argc, char **argv)
 {
   uWS::Hub h;
 
-  double tau_p = 0.06, tau_i = 0.001, tau_d = 0.6;
-  double t_tau_p = 100000, t_tau_i = 0, t_tau_d = 10000;
+  double tau_p = 0.08, tau_i = 0.001, tau_d = 0.65;
+  double t_tau_p = 1000000.0, t_tau_i = 0, t_tau_d = 100000.0;
   double max_throttle = 0.8;
-  double max_speed = 45;
+  double max_speed = 40;
 
   bool use_journal = false;
   std::string journal_file_name = "";
