@@ -39,6 +39,10 @@ enum Opt {
   kOptTauP,
   kOptTauI,
   kOptTauD,
+  kOptThrottleTauP,
+  kOptThrottleTauI,
+  kOptThrottleTauD,
+  kOptThrottle,
   kOptJournalFile,
 };
 
@@ -48,6 +52,10 @@ Opt GetOpt(const std::string &opt) {
   if (opt == "-p") return kOptTauP;
   if (opt == "-i") return kOptTauI;
   if (opt == "-d") return kOptTauD;
+  if (opt == "-tp") return kOptThrottleTauP;
+  if (opt == "-ti") return kOptThrottleTauI;
+  if (opt == "-td") return kOptThrottleTauD;
+  if (opt == "--throttle") return kOptThrottle;
   if (opt == "--journal") return kOptJournalFile;
   return kOptUnknown;
 }
@@ -56,10 +64,16 @@ Opt GetOpt(const std::string &opt) {
 void Help() {
   std::cout << "pid [-p tau_p] [-i tau_i] [-d tau_d] [--journal FILENAME]" << std::endl << std::endl;
   std::cout << "Run PID controller." << std::endl;
-  std::cout << "Options:" << std::endl;
+  std::cout << "PID options:" << std::endl;
   std::cout << "    -p tau_p" << std::endl;
   std::cout << "    -i tau_i" << std::endl;
   std::cout << "    -d tau_d" << std::endl;
+  std::cout << "Throttle PID options:" << std::endl;
+  std::cout << "    -tp tau_p" << std::endl;
+  std::cout << "    -ti tau_i" << std::endl;
+  std::cout << "    -td tau_d" << std::endl;
+  std::cout << "    --throttle max_throttle" << std::endl;
+  std::cout << "Journal options:" << std::endl;
   std::cout << "    --journal FILENAME" << std::endl;
 
   exit(1);
@@ -83,6 +97,8 @@ int main(int argc, char **argv)
   uWS::Hub h;
 
   double tau_p = 0.08, tau_i = 0.01, tau_d = 0.5;
+  double t_tau_p = 100000, t_tau_i = 0, t_tau_d = 10000;
+  double max_throttle = 0.6;
 
   bool use_journal = false;
   std::string journal_file_name = "";
@@ -110,6 +126,26 @@ int main(int argc, char **argv)
     case kOptTauD:
       i = shift(argc, i);
       tau_d = atof(argv[i]);
+      break;
+
+    case kOptThrottleTauP:
+      i = shift(argc, i);
+      t_tau_p = atof(argv[i]);
+      break;
+
+    case kOptThrottleTauI:
+      i = shift(argc, i);
+      t_tau_i = atof(argv[i]);
+      break;
+
+    case kOptThrottleTauD:
+      i = shift(argc, i);
+      t_tau_d = atof(argv[i]);
+      break;
+
+    case kOptThrottle:
+      i = shift(argc, i);
+      max_throttle = atof(argv[i]);
       break;
 
     case kOptJournalFile:
@@ -140,7 +176,10 @@ int main(int argc, char **argv)
   PID pid(tau_p, tau_i, tau_d);
   std::cout << "Use PID " << tau_p << ", " << tau_i << ", " << tau_d << std::endl;
 
-  h.onMessage([&pid, &journal](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  PID t_pid(t_tau_p, t_tau_i, t_tau_d);
+  std::cout << "Use Throttle PID " << t_tau_p << ", " << t_tau_i << ", " << t_tau_d << std::endl;
+
+  h.onMessage([&pid, &t_pid, &journal, max_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -157,16 +196,21 @@ int main(int argc, char **argv)
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
 
 	  pid.UpdateError(cte);
+	  t_pid.UpdateError(cte);
 
 	  double steer_value = -pid.TotalError();
 	  if (steer_value > 1.0) {
 	    steer_value = 1.0;
-	  }
-	  if (steer_value < -1.0) {
+	  } else if (steer_value < -1.0) {
 	    steer_value = -1.0;
 	  }
 
-	  double throttle = 0.3;
+	  double throttle = max_throttle - pid.TotalError();
+	  if (throttle > max_throttle) {
+	    throttle = max_throttle;
+	  } else if (throttle < -max_throttle) {
+	    throttle = -max_throttle;
+	  }
 
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
