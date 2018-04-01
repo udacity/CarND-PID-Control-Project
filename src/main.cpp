@@ -3,6 +3,10 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+#include <stdlib.h>
+#include "journal.h"
+#include <memory>
+
 
 // for convenience
 using json = nlohmann::json;
@@ -28,13 +32,115 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int main()
+
+enum Opt {
+  kOptUnknown = 0,
+  kOptHelp,
+  kOptTauP,
+  kOptTauI,
+  kOptTauD,
+  kOptJournalFile,
+};
+
+
+Opt GetOpt(const std::string &opt) {
+  if (opt == "-h" or opt == "--help") return kOptHelp;
+  if (opt == "-p") return kOptTauP;
+  if (opt == "-i") return kOptTauI;
+  if (opt == "-d") return kOptTauD;
+  if (opt == "--journal") return kOptJournalFile;
+  return kOptUnknown;
+}
+
+
+void Help() {
+  std::cout << "pid [-p tau_p] [-i tau_i] [-d tau_d] [--journal FILENAME]" << std::endl << std::endl;
+  std::cout << "Run PID controller." << std::endl;
+  std::cout << "Options:" << std::endl;
+  std::cout << "    -p tau_p" << std::endl;
+  std::cout << "    -i tau_i" << std::endl;
+  std::cout << "    -d tau_d" << std::endl;
+  std::cout << "    --journal FILENAME" << std::endl;
+
+  exit(1);
+}
+
+
+int shift(int argc, int i) {
+  i++;
+
+  if (i >= argc) {
+    std::cerr << "error: expected value" << std::endl;
+    Help();
+    exit(1);
+  }
+  return i;
+}
+
+
+int main(int argc, char **argv)
 {
   uWS::Hub h;
 
-  PID pid(0.2, 0.0003, 3.0);
+  double tau_p = 0.2, tau_i = 0.0003, tau_d = 3.0;
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  bool use_journal = false;
+  std::string journal_file_name = "";
+
+  std::shared_ptr<Journal> journal;
+
+  // read tau_ from command line
+  int i = 1;
+  while (i < argc) {
+    switch (GetOpt(argv[i])) {
+    case kOptHelp:
+      Help();
+      break;
+
+    case kOptTauP:
+      i = shift(argc, i);
+      tau_p = atof(argv[i]);
+      break;
+
+    case kOptTauI:
+      i = shift(argc, i);
+      tau_i = atof(argv[i]);
+      break;
+
+    case kOptTauD:
+      i = shift(argc, i);
+      tau_d = atof(argv[i]);
+      break;
+
+    case kOptJournalFile:
+      use_journal = true;
+      i = shift(argc, i);
+      journal_file_name = argv[i];
+      break;
+
+    default:
+      std::cerr << "error: unknown " << argv[i] << std::endl;
+      Help();
+      break;
+    }
+
+    i++;
+  }
+
+  if (use_journal) {
+    journal = std::make_shared<JournalFile>(journal_file_name);
+  } else {
+    journal = std::make_shared<Journal>();
+    std::cout << "Journal will not be used." << std::endl;
+  }
+
+  journal->WriteHeader();
+
+  // pid is a PID controller for steering angle
+  PID pid(tau_p, tau_i, tau_d);
+  std::cout << "Use PID " << tau_p << ", " << tau_i << ", " << tau_d << std::endl;
+
+  h.onMessage([&pid, &journal](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -60,12 +166,15 @@ int main()
 	    steer_value = -1.0;
 	  }
 
+	  double throttle = 0.3;
+
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+	  journal->Write(cte, steer_value, throttle);
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
@@ -112,5 +221,6 @@ int main()
     std::cerr << "Failed to listen to port" << std::endl;
     return -1;
   }
+
   h.run();
 }
