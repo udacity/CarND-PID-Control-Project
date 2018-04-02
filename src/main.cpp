@@ -3,6 +3,10 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+#include <stdlib.h>
+#include "journal.h"
+#include <memory>
+
 
 // for convenience
 using json = nlohmann::json;
@@ -28,14 +32,163 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int main()
+
+enum Opt {
+  kOptUnknown = 0,
+  kOptHelp,
+  kOptTauP,
+  kOptTauI,
+  kOptTauD,
+  kOptThrottleTauP,
+  kOptThrottleTauI,
+  kOptThrottleTauD,
+  kOptMaxSpeed,
+  kOptThrottle,
+  kOptJournalFile,
+};
+
+
+Opt GetOpt(const std::string &opt) {
+  if (opt == "-h" or opt == "--help") return kOptHelp;
+  if (opt == "-p") return kOptTauP;
+  if (opt == "-i") return kOptTauI;
+  if (opt == "-d") return kOptTauD;
+  if (opt == "-tp") return kOptThrottleTauP;
+  if (opt == "-ti") return kOptThrottleTauI;
+  if (opt == "-td") return kOptThrottleTauD;
+  if (opt == "--max-speed") return kOptMaxSpeed;
+  if (opt == "--throttle") return kOptThrottle;
+  if (opt == "--journal") return kOptJournalFile;
+  return kOptUnknown;
+}
+
+
+void Help() {
+  std::cout << "pid [-p tau_p] [-i tau_i] [-d tau_d] [--journal FILENAME]" << std::endl << std::endl;
+  std::cout << "Run PID controller." << std::endl;
+  std::cout << "PID options:" << std::endl;
+  std::cout << "    -p tau_p" << std::endl;
+  std::cout << "    -i tau_i" << std::endl;
+  std::cout << "    -d tau_d" << std::endl;
+  std::cout << "    --max-speed SPEED" << std::endl;
+  std::cout << "Throttle PID options:" << std::endl;
+  std::cout << "    -tp tau_p" << std::endl;
+  std::cout << "    -ti tau_i" << std::endl;
+  std::cout << "    -td tau_d" << std::endl;
+  std::cout << "    --throttle max_throttle" << std::endl;
+  std::cout << "Journal options:" << std::endl;
+  std::cout << "    --journal FILENAME" << std::endl;
+
+  exit(1);
+}
+
+
+int shift(int argc, int i) {
+  i++;
+
+  if (i >= argc) {
+    std::cerr << "error: expected value" << std::endl;
+    Help();
+    exit(1);
+  }
+  return i;
+}
+
+
+int main(int argc, char **argv)
 {
   uWS::Hub h;
 
-  PID pid;
-  // TODO: Initialize the pid variable.
+  double tau_p = 0.08, tau_i = 0.001, tau_d = 0.65;
+  double t_tau_p = 1000000.0, t_tau_i = 0, t_tau_d = 100000.0;
+  double max_throttle = 0.8;
+  double max_speed = 40;
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  bool use_journal = false;
+  std::string journal_file_name = "";
+
+  std::shared_ptr<Journal> journal;
+
+  // read tau_ from command line
+  int i = 1;
+  while (i < argc) {
+    switch (GetOpt(argv[i])) {
+    case kOptHelp:
+      Help();
+      break;
+
+    case kOptTauP:
+      i = shift(argc, i);
+      tau_p = atof(argv[i]);
+      break;
+
+    case kOptTauI:
+      i = shift(argc, i);
+      tau_i = atof(argv[i]);
+      break;
+
+    case kOptTauD:
+      i = shift(argc, i);
+      tau_d = atof(argv[i]);
+      break;
+
+    case kOptThrottleTauP:
+      i = shift(argc, i);
+      t_tau_p = atof(argv[i]);
+      break;
+
+    case kOptThrottleTauI:
+      i = shift(argc, i);
+      t_tau_i = atof(argv[i]);
+      break;
+
+    case kOptThrottleTauD:
+      i = shift(argc, i);
+      t_tau_d = atof(argv[i]);
+      break;
+
+    case kOptMaxSpeed:
+      i = shift(argc, i);
+      max_speed = atof(argv[i]);
+      break;
+
+    case kOptThrottle:
+      i = shift(argc, i);
+      max_throttle = atof(argv[i]);
+      break;
+
+    case kOptJournalFile:
+      use_journal = true;
+      i = shift(argc, i);
+      journal_file_name = argv[i];
+      break;
+
+    default:
+      std::cerr << "error: unknown " << argv[i] << std::endl;
+      Help();
+      break;
+    }
+
+    i++;
+  }
+
+  if (use_journal) {
+    journal = std::make_shared<JournalFile>(journal_file_name);
+  } else {
+    journal = std::make_shared<Journal>();
+    std::cout << "Journal will not be used." << std::endl;
+  }
+
+  journal->WriteHeader();
+
+  // pid is a PID controller for steering angle
+  PID pid(tau_p, tau_i, tau_d);
+  std::cout << "Use PID " << tau_p << ", " << tau_i << ", " << tau_d << std::endl;
+
+  PID t_pid(t_tau_p, t_tau_i, t_tau_d);
+  std::cout << "Use Throttle PID " << t_tau_p << ", " << t_tau_i << ", " << t_tau_d << std::endl;
+
+  h.onMessage([&pid, &t_pid, &journal, max_speed, max_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -50,20 +203,36 @@ int main()
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-          double steer_value;
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
-          
+
+	  pid.UpdateError(cte);
+	  t_pid.UpdateError(cte);
+
+	  double steer_value = -pid.TotalError();
+	  if (steer_value > 1.0) {
+	    steer_value = 1.0;
+	  } else if (steer_value < -1.0) {
+	    steer_value = -1.0;
+	  }
+
+	  double throttle_factor = speed / max_speed;
+	  if (throttle_factor < 0.001) {
+	    throttle_factor = 0.001;
+	  }
+	  throttle_factor = std::max(1.0, 1.5 * throttle_factor);
+	  double throttle = (1 / throttle_factor)  * (max_throttle - pid.TotalError());
+	  if (throttle > max_throttle) {
+	    throttle = max_throttle;
+	  } else if (throttle < -max_throttle) {
+	    throttle = -max_throttle;
+	  }
+
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+	  journal->Write(cte, steer_value, throttle);
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
@@ -110,5 +279,6 @@ int main()
     std::cerr << "Failed to listen to port" << std::endl;
     return -1;
   }
+
   h.run();
 }

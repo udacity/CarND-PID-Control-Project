@@ -1,36 +1,31 @@
 #ifndef PID_H
 #define PID_H
 
+enum Tau {
+  kP = 0,
+  kI = 1,
+  kD = 2
+};
+
+
 class PID {
 public:
   /*
   * Errors
   */
-  double p_error;
-  double i_error;
-  double d_error;
+  double p_cte_;
+  double i_cte_;
+  double d_cte_;
 
   /*
   * Coefficients
-  */ 
-  double Kp;
-  double Ki;
-  double Kd;
+  */
+  double tau_[3];
 
   /*
   * Constructor
   */
-  PID();
-
-  /*
-  * Destructor.
-  */
-  virtual ~PID();
-
-  /*
-  * Initialize PID.
-  */
-  void Init(double Kp, double Ki, double Kd);
+  PID(double tau_p, double tau_i, double tau_d);
 
   /*
   * Update the PID error variables given cross track error.
