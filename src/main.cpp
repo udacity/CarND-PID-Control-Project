@@ -67,6 +67,11 @@ int main()
 
           pid.UpdateError(cte);
           steer_value = pid.TotalError();
+          // smooth
+          double smoother = 0.75;
+          steer_value = smoother * steer_value + (1-smoother) * deg2rad(angle);
+ 
+
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
           twiddle_tune.update(cte);

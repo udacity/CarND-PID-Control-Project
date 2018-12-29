@@ -7,8 +7,6 @@ class PID {
 public:
   /* smoother
   */
-  double prev_steering;
-  double alpha;
   /*
   * Errors
   */
