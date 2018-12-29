@@ -11,6 +11,8 @@ PID::PID()
 	this->p_error = 0;
 	this->i_error = 0;
 	this->d_error = 0;
+
+	this->alpha = 0.8;
 }
 
 PID::~PID() {}
@@ -37,6 +39,9 @@ double PID::TotalError() {
 
 	steering = (steering > 1 ? 1 : steering);
 	steering = (steering < -1 ? -1 : steering);
+
+	double smooth = this->alpha * steering + (1 - this->alpha) * this->prev_steering;
+	this->prev_steering = steering;
 	return steering;
 }
 

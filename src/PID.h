@@ -5,6 +5,10 @@
 
 class PID {
 public:
+  /* smoother
+  */
+  double prev_steering;
+  double alpha;
   /*
   * Errors
   */
@@ -18,6 +22,7 @@ public:
   double Kp;
   double Ki;
   double Kd;
+
 
   /*
   * Constructor
