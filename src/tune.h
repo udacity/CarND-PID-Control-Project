@@ -102,6 +102,10 @@ twiddle::twiddle()
 
 	params_stream.close();
 
+	cout << "iteration " << this->iteration << endl;
+	cout << "tune param " << this->tune_param << endl;
+	cout << "twiddle stage " << this->twiddle_stage << endl;
+
 	// perform twiddle update
 	if (0 == this->tune_param && 0 == this->twiddle_stage) {
 		this->Kp += this->dKp;
@@ -201,11 +205,13 @@ void twiddle::update(const double& cte)
 	std::vector<double> dP({this->dKp, this->dKd, this->dKi});
 	bool finished = false;
 	int i = 0;
+
+	cout << endl << endl << "----------------------------------------------" << endl;
     while (!finished)
 	//for (int i = 0; i < P.size(); i++)
 	{
-		i++;
 		if (i != this->tune_param) {
+			i++;
 			continue;
 		}
 
@@ -251,7 +257,9 @@ void twiddle::update(const double& cte)
 			throw "twiddle stage is neigher 0/1. what the ..";
 		}
 		finished = true;
+		i++;
 	}
+	cout << endl << endl << "----------------------------------------------" << endl;
 
 	// dump results
 	std::ofstream params_stream(this->parameters_file.c_str());
@@ -287,6 +295,7 @@ void twiddle::update(const double& cte)
 	params_stream.close();
 
 	this->updated = true;
+	cout << "updated" << endl;
 }
 
 
