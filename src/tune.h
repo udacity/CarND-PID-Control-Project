@@ -53,8 +53,9 @@ private:
 	unsigned int tune_param;
 	unsigned int counter;
 	unsigned int iteration, twiddle_stage;
-	unsigned int limit = 500;
+	unsigned int limit;
 	double best_error;
+	bool updated = false;
 };
 
 
@@ -83,6 +84,7 @@ twiddle::twiddle()
 		1			: dKi
 		1			: tune param
 		10000	 	: best error
+		1000		: limit
 	*/
 	params_stream >> this->iteration;
 	params_stream >> this->twiddle_stage;
@@ -96,6 +98,8 @@ twiddle::twiddle()
 
 	params_stream >> this->tune_param;
 	params_stream >> this->best_error;
+	params_stream >> this->limit;
+
 	params_stream.close();
 
 	// perform twiddle update
@@ -187,7 +191,7 @@ void twiddle::update(const double& cte)
 {
 	this->counter++;
 	cout << this->counter << endl;
-	if (this->counter < limit) {
+	if (this->counter < limit || this->updated) {
 		return;
 	}
 
@@ -195,8 +199,12 @@ void twiddle::update(const double& cte)
 
 	std::vector<double> P({this->Kp, this->Kd, this->Ki});
 	std::vector<double> dP({this->dKp, this->dKd, this->dKi});
-    for (int i = 0; i < P.size(); i++)
+	bool finished = false;
+	int i = 0;
+    while (!finished)
+	//for (int i = 0; i < P.size(); i++)
 	{
+		i++;
 		if (i != this->tune_param) {
 			continue;
 		}
@@ -205,6 +213,8 @@ void twiddle::update(const double& cte)
 		{
 			if (abs(cte) < this->best_error)
 			{
+				cout << i << " : stage 0 : abs(cte) < this->best_error" << endl;
+
 				this->best_error = abs(cte);
 				dP[i] *= 1.1;
 				// done, next parameter
@@ -214,6 +224,7 @@ void twiddle::update(const double& cte)
 			}
 			else // proceed to next run, same parameter
 			{
+				cout << i << " : stage 0 : abs(cte) > this->best_error -> stage 1" << endl;
 				P[i] -= 2 * dP[i];
 				this->twiddle_stage += 1;
 			}
@@ -222,10 +233,12 @@ void twiddle::update(const double& cte)
 		{
 			if (abs(cte) < this->best_error)
 			{
+				cout << i << " : stage 1 : abs(cte) < this->best_error" << endl;
 				this->best_error = abs(cte);
 				dP[i] *= 1.1;
 			}
 			else {
+				cout << i << " : stage 1 : abs(cte) > this->best_error" << endl;
 				P[i] += dP[i];				
 				dP[i] *= 0.9;
 			}
@@ -237,9 +250,43 @@ void twiddle::update(const double& cte)
 		else {
 			throw "twiddle stage is neigher 0/1. what the ..";
 		}
+		finished = true;
 	}
 
 	// dump results
+	std::ofstream params_stream(this->parameters_file.c_str());
+	if (!params_stream.is_open()) {
+		throw "parameters file wont open";
+	}
+
+	/* parameters file
+		0 			: iteration
+		0			: twiddle_stage
+		0.1			: Kp
+		0			: Ki
+		0			: Kd
+		1			: dKp
+		1			: dKd
+		1			: dKi
+		1			: tune param
+		10000	 	: best error
+	*/
+	params_stream << this->iteration << std::endl;
+	params_stream << this->twiddle_stage << std::endl;
+	params_stream << this->Kp << std::endl;
+	params_stream << this->Ki << std::endl;
+	params_stream << this->Kd << std::endl;
+
+	params_stream << this->dKp << std::endl;
+	params_stream << this->dKi << std::endl;
+	params_stream << this->dKd << std::endl;
+
+	params_stream << this->tune_param << std::endl;
+	params_stream << this->best_error << std::endl;
+	params_stream << this->limit << std::endl;	
+	params_stream.close();
+
+	this->updated = true;
 }
 
 
