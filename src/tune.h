@@ -203,7 +203,7 @@ void twiddle::update(const double& cte)
 		return;
 	}
 
-	double max_tol = 0.2;
+	double err = this->total_error / this->counter;
 
 	std::vector<double> P({this->Kp, this->Kd, this->Ki});
 	std::vector<double> dP({this->dKp, this->dKd, this->dKi});
@@ -221,9 +221,9 @@ void twiddle::update(const double& cte)
 
 		if (this->twiddle_stage == 0)
 		{
-			if (abs(cte) < this->best_error)
+			if (err < this->best_error)
 			{
-				cout << i << " : stage 0 : abs(cte) < this->best_error" << endl;
+				cout << i << " : stage 0 : abs(err) < this->best_error" << endl;
 
 				this->best_error = abs(cte);
 				dP[i] *= 1.1;
@@ -234,17 +234,17 @@ void twiddle::update(const double& cte)
 			}
 			else // proceed to next run, same parameter
 			{
-				cout << i << " : stage 0 : abs(cte) > this->best_error -> stage 1" << endl;
+				cout << i << " : stage 0 : abs(err) > this->best_error -> stage 1" << endl;
 				P[i] -= 2 * dP[i];
 				this->twiddle_stage += 1;
 			}
 		}
 		else if (this->twiddle_stage == 1)
 		{
-			if (abs(cte) < this->best_error)
+			if (err < this->best_error)
 			{
 				cout << i << " : stage 1 : abs(cte) < this->best_error" << endl;
-				this->best_error = abs(cte);
+				this->best_error = err;
 				dP[i] *= 1.1;
 			}
 			else {
