@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <unistd.h>
 #include <math.h>
+#include <cmath>
 
 
 using namespace std;
@@ -52,6 +53,7 @@ private:
 	const std::string parameters_file = std::string("../parameters.csv");
 	unsigned int tune_param;
 	unsigned int counter;
+	unsigned int total_error;
 	unsigned int iteration, twiddle_stage;
 	unsigned int limit;
 	double best_error;
@@ -66,6 +68,7 @@ twiddle::twiddle()
 	this->Ki = Ki_default;
 	this->tune_param = 0;
 	this->counter = 0;
+	this0>total_error = 0;
 
 	std::string line;
 	std::ifstream params_stream(this->parameters_file.c_str());
@@ -194,6 +197,7 @@ void twiddle::online_update(const double& cte)
 void twiddle::update(const double& cte)
 {
 	this->counter++;
+	this->total_error += abs(cte);
 	cout << this->counter << endl;
 	if (this->counter < limit || this->updated) {
 		return;

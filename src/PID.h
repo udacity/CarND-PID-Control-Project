@@ -2,11 +2,12 @@
 #define PID_H
 #include <iostream>
 #include <iomanip>
+#include <cmath>
+
 
 class PID {
 public:
-  /* smoother
-  */
+ 
   /*
   * Errors
   */
