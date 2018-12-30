@@ -68,7 +68,7 @@ twiddle::twiddle()
 	this->Ki = Ki_default;
 	this->tune_param = 0;
 	this->counter = 0;
-	this0>total_error = 0;
+	this->total_error = 0;
 
 	std::string line;
 	std::ifstream params_stream(this->parameters_file.c_str());
