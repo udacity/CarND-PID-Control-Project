@@ -48,28 +48,28 @@ public:
 	std::vector<double> get_params();
 	std::vector<double> set_params(const double Kp, const double Kd, const double Ki, const unsigned int& tune_param);
 	void update(const double& cte);
-	void online_update(const double& cte);
+	bool updated;
 
 private:
 	const std::string parameters_file = std::string("../parameters.csv");
 	unsigned int tune_param;
 	unsigned int counter;
-	unsigned int total_error;
+	double total_error;
 	unsigned int iteration, twiddle_stage;
 	unsigned int limit;
 	double best_error;
-	bool updated = false;
 };
 
 
 twiddle::twiddle()
 {
 	this->Kp = Kp_default;
-	this->Kd = Kd_default;
 	this->Ki = Ki_default;
+	this->Kd = Kd_default;
 	this->tune_param = 0;
 	this->counter = 0;
 	this->total_error = 0;
+	this->updated = false;
 
 	std::string line;
 	std::ifstream params_stream(this->parameters_file.c_str());
@@ -78,6 +78,7 @@ twiddle::twiddle()
 	}
 
 	/* parameters file
+		1 			: enable
 		0 			: iteration
 		0			: twiddle_stage
 		0.1			: Kp
@@ -112,13 +113,13 @@ twiddle::twiddle()
 	cout << "twiddle stage " << this->twiddle_stage << endl;
 
 	// perform twiddle update
-	if (0 == this->tune_param && 0 == this->twiddle_stage) {
+	if ((0 == this->tune_param) && (0 == this->twiddle_stage)) {
 		this->Kp += this->dKp;
 	}
-	else if (1 == this->tune_param && 0 == this->twiddle_stage) {
+	else if ((1 == this->tune_param) && (0 == this->twiddle_stage)) {
 		this->Ki += this->dKi;
 	}
-	else if (2 == this->tune_param && 0 == this->twiddle_stage) {
+	else if ((2 == this->tune_param) && (0 == this->twiddle_stage)) {
 		this->Kd += this->dKd;
 	}
 }
@@ -136,71 +137,16 @@ std::vector<double> twiddle::set_params(const double Kp, const double Kd, const 
 	}
 }
 
-void twiddle::online_update(const double& cte)
-{
-	this->counter++;
-	cout << this->counter << endl;
-	if (this->counter < limit) {
-		return;
-	}
-
-	double max_tol = 0.2;
-
-	std::vector<double> P({this->Kp, this->Kd, this->Ki});
-	std::vector<double> dP({this->dKp, this->dKd, this->dKi});
-    for (int i = 0; i < P.size(); i++)
-	{
-		if (i != this->tune_param) {
-			continue;
-		}
-
-		if (this->twiddle_stage == 0)
-		{
-			if (abs(cte) < this->best_error)
-			{
-				this->best_error = abs(cte);
-				dP[i] *= 1.1;
-				// done, next parameter
-				this->tune_param += 1;
-				this->tune_param %= P.size();
-				this->iteration += 1;
-			}
-			else // proceed to next run, same parameter
-			{
-				P[i] -= 2 * dP[i];
-				this->twiddle_stage += 1;
-			}
-		}
-		else if (this->twiddle_stage == 1)
-		{
-			if (abs(cte) < this->best_error)
-			{
-				this->best_error = abs(cte);
-				dP[i] *= 1.1;
-			}
-			else {
-				P[i] += dP[i];				
-				dP[i] *= 0.9;
-			}
-			this->twiddle_stage = 0;
-			this->tune_param += 1;
-			this->tune_param %= P.size();
-			this->iteration += 1;
-		}
-		else {
-			throw "twiddle stage is neigher 0/1. what the ..";
-		}
-	}
-
-}
-
-
 
 void twiddle::update(const double& cte)
 {
+
 	this->counter++;
-	this->total_error += abs(cte);
-	cout << this->counter << endl;
+	cout << "cte = " << cte << ", abs(cte)=" << abs(cte) << endl;
+	this->total_error = this->total_error + abs(cte);
+	cout << "this->total_error = " << this->total_error  << endl;
+	cout << "this->counter = " << this->counter << endl;
+	
 	if (this->counter < limit || this->updated) {
 		return;
 	}
@@ -209,6 +155,9 @@ void twiddle::update(const double& cte)
 	}
 
 	double err = this->total_error / this->counter;
+	cout << this->counter << endl;
+	cout << "err=" <<err<<endl;
+	// double err = cte;
 
 	std::vector<double> P({this->Kp, this->Ki, this->Kd});
 	std::vector<double> dP({this->dKp, this->dKi, this->dKd});
@@ -228,9 +177,9 @@ void twiddle::update(const double& cte)
 		{
 			if (err < this->best_error)
 			{
-				cout << i << " : stage 0 : abs(err) < this->best_error" << endl;
+				cout << i << " : stage 0 : abs(err) < this->best_error : " << abs(err) << " < " << this->best_error << endl;
 
-				this->best_error = abs(cte);
+				this->best_error = abs(err);
 				dP[i] *= 1.1;
 				// done, next parameter
 				this->tune_param += 1;
@@ -241,19 +190,19 @@ void twiddle::update(const double& cte)
 			{
 				cout << i << " : stage 0 : abs(err) > this->best_error -> stage 1" << endl;
 				P[i] -= 2 * dP[i];
-				this->twiddle_stage += 1;
+				this->twiddle_stage = 1;
 			}
 		}
 		else if (this->twiddle_stage == 1)
 		{
 			if (err < this->best_error)
 			{
-				cout << i << " : stage 1 : abs(cte) < this->best_error" << endl;
+				cout << i << " : stage 1 : abs(err) < this->best_error" << endl;
 				this->best_error = err;
 				dP[i] *= 1.1;
 			}
 			else {
-				cout << i << " : stage 1 : abs(cte) > this->best_error" << endl;
+				cout << i << " : stage 1 : abs(err) > this->best_error" << endl;
 				P[i] += dP[i];				
 				dP[i] *= 0.9;
 			}

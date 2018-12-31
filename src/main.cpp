@@ -30,6 +30,15 @@ std::string hasData(std::string s) {
   return "";
 }
 
+
+
+// Reset the car back to starting position, and it can be used in twiddle
+void restart(uWS::WebSocket<uWS::SERVER> ws){
+  std::string reset_msg = "42[\"reset\",{}]";
+  ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
+}
+
+
 int main()
 {
   uWS::Hub h;
@@ -38,8 +47,8 @@ int main()
 
   // TODO: Initialize the pid variable.
   bool tuning_phase = true;
-  twiddle twiddle_tune;
-  pid.Init(twiddle_tune.Kp, twiddle_tune.Ki, twiddle_tune.Kd);
+  twiddle* twiddle_tune = new twiddle();
+  pid.Init(twiddle_tune->Kp, twiddle_tune->Ki, twiddle_tune->Kd);
   //pid.Init(0.1, 0, 0);
   vector<double> last_steering({0, 0});
 
@@ -70,15 +79,31 @@ int main()
           steer_value = pid.TotalError();
           // smooth
           //double smoother = 1.;
+          // double mx = 0.2;
+          // if (steer_value - deg2rad(angle) > mx) {
+          //   steer_value = deg2rad(angle) + mx;
+          // }
+          // else if (steer_value - deg2rad(angle) < -mx) {
+          //   steer_value = deg2rad(angle) - mx;
+          // }
+
           //steer_value = smoother * steer_value + (1-smoother) * deg2rad(angle);
-          vector<double> _tmp({last_steering[1], steer_value});
-          steer_value = (last_steering[0] + last_steering[1] + steer_value) / 3;
-          last_steering = _tmp;
+          // steer_value = (last_steering[0] + last_steering[1] + steer_value) / 3;
+          // last_steering = vector<double>({last_steering[1], steer_value});
 
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-          twiddle_tune.update(cte);
-
+          twiddle_tune->update(cte);
+          if (twiddle_tune->updated)
+          {
+            cout << "restarting" << endl;
+            delete twiddle_tune;
+            twiddle_tune = new twiddle();
+            pid.Init(twiddle_tune->Kp, twiddle_tune->Ki, twiddle_tune->Kd);
+            
+            steer_value = 0;
+            restart(ws);
+          }
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
