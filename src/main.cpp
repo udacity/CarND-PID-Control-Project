@@ -41,8 +41,9 @@ int main()
   twiddle twiddle_tune;
   pid.Init(twiddle_tune.Kp, twiddle_tune.Ki, twiddle_tune.Kd);
   //pid.Init(0.1, 0, 0);
+  vector<double> last_steering({0, 0});
 
-  h.onMessage([&pid, &twiddle_tune](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&pid, &last_steering, &twiddle_tune](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -68,9 +69,11 @@ int main()
           pid.UpdateError(cte);
           steer_value = pid.TotalError();
           // smooth
-          double smoother = 1.;
-          steer_value = smoother * steer_value + (1-smoother) * deg2rad(angle);
- 
+          //double smoother = 1.;
+          //steer_value = smoother * steer_value + (1-smoother) * deg2rad(angle);
+          vector<double> _tmp({last_steering[1], steer_value});
+          steer_value = (last_steering[0] + last_steering[1] + steer_value) / 3;
+          last_steering = _tmp;
 
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
@@ -78,7 +81,7 @@ int main()
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.5;
+          msgJson["throttle"] = 0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

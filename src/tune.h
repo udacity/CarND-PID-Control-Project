@@ -38,6 +38,7 @@ double Ki_default = 0;
 class twiddle
 {
 public:
+	bool enable;
 	double Kp, Kd, Ki;
 	double dKp, dKd, dKi;
 	vector<double> K, dK;
@@ -89,6 +90,7 @@ twiddle::twiddle()
 		10000	 	: best error
 		1000		: limit
 	*/
+	params_stream >> this->enable;
 	params_stream >> this->iteration;
 	params_stream >> this->twiddle_stage;
 	params_stream >> this->Kp;
@@ -202,11 +204,14 @@ void twiddle::update(const double& cte)
 	if (this->counter < limit || this->updated) {
 		return;
 	}
+	if (!this->enable) {
+		return;
+	}
 
 	double err = this->total_error / this->counter;
 
-	std::vector<double> P({this->Kp, this->Kd, this->Ki});
-	std::vector<double> dP({this->dKp, this->dKd, this->dKi});
+	std::vector<double> P({this->Kp, this->Ki, this->Kd});
+	std::vector<double> dP({this->dKp, this->dKi, this->dKd});
 	bool finished = false;
 	int i = 0;
 
@@ -283,6 +288,16 @@ void twiddle::update(const double& cte)
 		1			: tune param
 		10000	 	: best error
 	*/
+
+	this->Kp = P[0];
+	this->Ki = P[1];
+	this->Kd = P[2];
+
+	this->dKp = dP[0];
+	this->dKi = dP[1];
+	this->dKd = dP[2];
+
+	params_stream << this->enable << endl;
 	params_stream << this->iteration << std::endl;
 	params_stream << this->twiddle_stage << std::endl;
 	params_stream << this->Kp << std::endl;
