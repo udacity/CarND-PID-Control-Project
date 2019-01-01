@@ -81,19 +81,6 @@ int main()
           outfile.close();
           pid.UpdateError(cte);
           steer_value = pid.TotalError();
-          // smooth
-          //double smoother = 1.;
-          // double mx = 0.2;
-          // if (steer_value - deg2rad(angle) > mx) {
-          //   steer_value = deg2rad(angle) + mx;
-          // }
-          // else if (steer_value - deg2rad(angle) < -mx) {
-          //   steer_value = deg2rad(angle) - mx;
-          // }
-
-          //steer_value = smoother * steer_value + (1-smoother) * deg2rad(angle);
-          // steer_value = (last_steering[0] + last_steering[1] + steer_value) / 3;
-          // last_steering = vector<double>({last_steering[1], steer_value});
 
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
