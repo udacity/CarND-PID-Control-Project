@@ -48,7 +48,7 @@ using the following settings:
 
 ## Code Style
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html). `clang-format.sh` script would help in keeping code formatting style as per Google's style.
 
 ## Project Instructions and Rubric
 

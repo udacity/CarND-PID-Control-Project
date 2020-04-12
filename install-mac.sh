@@ -1,4 +1,4 @@
-brew install openssl libuv cmake
+brew install openssl libuv cmake clang-format
 git clone https://github.com/uWebSockets/uWebSockets 
 cd uWebSockets
 git checkout e94b6e1
