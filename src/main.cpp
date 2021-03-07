@@ -19,7 +19,7 @@ double rad2deg(double x) { return x * 180 / pi(); }
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
-string hasData(const  string &s)
+string hasData(const string &s)
 {
     auto found_null = s.find("null");
     auto b1 = s.find_first_of('[');
@@ -39,13 +39,15 @@ int main()
 {
     uWS::Hub h;
 
-    PID pid;
-    /**
-     * TODO: Initialize the pid variable.
-     */
+    // PID controller for strering and throttle
+    PID pid_steer, pid_throttle;
 
-    h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                       uWS::OpCode opCode)
+    // Initial params
+    pid_steer.Init(0.134611, 0.000270736, 3.05349);
+    //  TODO
+
+    h.onMessage([&pid_steer, &pid_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+                                            uWS::OpCode opCode)
                 {
                     // "42" at the start of the message means there's a websocket message event.
                     // The 4 signifies a websocket message
@@ -67,12 +69,10 @@ int main()
                                 double speed = std::stod(j[1]["speed"].get<string>());
                                 double angle = std::stod(j[1]["steering_angle"].get<string>());
                                 double steer_value;
-                                /**
-                                 * TODO: Calculate steering value here, remember the steering value is
-                                 *   [-1, 1].
-                                 * NOTE: Feel free to play around with the throttle and speed.
-                                 *   Maybe use another PID controller to control the speed!
-                                 */
+
+                                pid_steer.UpdateError(cte);
+
+                                steer_value = pid_steer.get_steering();
 
                                 // DEBUG
                                 std::cout << "CTE: " << cte << " Steering Value: " << steer_value
