@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <uWS/uWS.h>
 #include <iostream>
 #include <string>
@@ -9,12 +9,9 @@
 using nlohmann::json;
 using std::string;
 
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-
-double deg2rad(double x) { return x * pi() / 180; }
-
-double rad2deg(double x) { return x * 180 / pi(); }
+const double MAX_SPEED = 50.0;
+const double MAX_ANGLE = 20.0;
+const double MAX_THROTTLE = 0.3;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -40,11 +37,8 @@ int main()
     uWS::Hub h;
 
     // PID controller for strering and throttle
-    PID pid_steer, pid_throttle;
-
-    // Initial params
-    pid_steer.Init(0.134611, 0.000270736, 3.05349);
-    //  TODO
+    PID pid_steer(0.135, 0.0015, 8.51561);
+    PID pid_throttle(0.6, 0, 1);
 
     h.onMessage([&pid_steer, &pid_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                                             uWS::OpCode opCode)
@@ -52,16 +46,13 @@ int main()
                     // "42" at the start of the message means there's a websocket message event.
                     // The 4 signifies a websocket message
                     // The 2 signifies a websocket event
-                    if (length && length > 2 && data[0] == '4' && data[1] == '2')
+                    if (length > 2 && data[0] == '4' && data[1] == '2')
                     {
                         auto s = hasData(string(data).substr(0, length));
-
                         if (!s.empty())
                         {
                             auto j = json::parse(s);
-
                             string event = j[0].get<string>();
-
                             if (event == "telemetry")
                             {
                                 // j[1] is the data JSON object
@@ -69,10 +60,18 @@ int main()
                                 double speed = std::stod(j[1]["speed"].get<string>());
                                 double angle = std::stod(j[1]["steering_angle"].get<string>());
                                 double steer_value;
+                                double throttle_value;
 
                                 pid_steer.UpdateError(cte);
+                                steer_value = pid_steer.Controller();
 
-                                steer_value = pid_steer.get_steering();
+                                double target_speed =
+                                        std::max(0.0, MAX_SPEED * (1.0 - fabs(angle / MAX_ANGLE * cte) / 4));
+
+                                target_speed = std::min(MAX_SPEED, target_speed);
+                                pid_throttle.UpdateError(speed - target_speed);
+
+                                throttle_value = std::min(MAX_THROTTLE, 0.7 + pid_throttle.Controller());
 
                                 // DEBUG
                                 std::cout << "CTE: " << cte << " Steering Value: " << steer_value
@@ -80,7 +79,7 @@ int main()
 
                                 json msgJson;
                                 msgJson["steering_angle"] = steer_value;
-                                msgJson["throttle"] = 0.3;
+                                msgJson["throttle"] = throttle_value;
                                 auto msg = "42[\"steer\"," + msgJson.dump() + "]";
                                 std::cout << msg << std::endl;
                                 ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
