@@ -9,18 +9,12 @@ public:
     /**
      * Constructor
      */
-    PID();
+    PID(double Kp_, double Ki_, double Kd_);
 
     /**
      * Destructor.
      */
     virtual ~PID();
-
-    /**
-     * Initialize PID.
-     * @param (Kp_, Ki_, Kd_) The initial PID coefficients
-     */
-    void Init(double Kp_, double Ki_, double Kd_);
 
     /**
      * Update the PID error variables given cross track error.
@@ -32,7 +26,8 @@ public:
      * Calculate the total PID error.
      * @output The total PID error
      */
-    double get_steering();
+    double Controller();
+
 
 private:
     /**
@@ -48,11 +43,6 @@ private:
     double Kp;
     double Ki;
     double Kd;
-
-    double total_error;
-    double best_error;
-    std::vector<double> dp;
-
 };
 
 #endif  // PID_H
