@@ -12,11 +12,12 @@ Project: PID Controller
 ### Discussions
 
 #### PID Controller
-* P - Propotional
+* P - Proportional
 * I - Intergral
-* D - Derivative
+* D - Differential
 
 |<img src="data/pid-img.png" width="600" height="250" />|
 |-------------------------------------------------------------|
 
 
+###### P - Proportional
