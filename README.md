@@ -49,3 +49,13 @@ The **I** was set to a small value(0.00009) since the target speed is constantly
 #### Hyperparameter Tuning
 I choose the manual method to provide hyperparameters for the PID controller. I tested a lot of parameters and found a few interest parameters for different hardware specs.
 Those parameters can be found from [`steer_params.txt`](data/steer_params.txt) and [`throttle_params.txt`](data/throttle_params.txt) files.
+
+### References
+* https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013
+* http://ais.informatik.uni-freiburg.de/teaching/ss18/robotics/index_en.php
+* https://github.com/snandasena/path-plnaning-n-localization
+* https://github.com/MarkBroerkens/CarND-PID-Control-Project
+* https://thinkautonomous.medium.com/
+
+### Acknowledgments
+Big thank you to [Udacity](https://www.udacity.com) for providing the template code and simulator for this project.
