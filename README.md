@@ -11,6 +11,9 @@ Project: PID Controller
 
 ### Discussions
 
+The streering PID controller analyzes the cross track error(CTE) provided by the simulator and calculates the streering angle that tries to bring the car back to the center of the lane line. 
+
+
 #### PID Controller
 * P - Proportional
 * I - Intergral
@@ -21,3 +24,5 @@ Project: PID Controller
 
 
 ###### P - Proportional
+
+The **P** is the most directly observable effect on the car's behaviour. 
