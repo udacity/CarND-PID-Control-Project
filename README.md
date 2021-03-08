@@ -11,6 +11,8 @@ Project: PID Controller
 
 ### Discussions
 
-#### PID 
+#### PID Controller
+
+<img src="data/pid_controller.svg" width="600" height="75" />
 
 
