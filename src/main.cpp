@@ -9,7 +9,7 @@
 using nlohmann::json;
 using std::string;
 
-const double MAX_SPEED = 50.0;
+const double MAX_SPEED = 100.0;
 const double MAX_ANGLE = 20.0;
 const double MAX_THROTTLE = 0.3;
 
@@ -64,7 +64,7 @@ int main()
                                 double throttle_value;
 
                                 pid_steer.UpdateError(cte);
-                                steer_value = pid_steer.Controller();
+                                steer_value = pid_steer.GetController();
 
                                 double target_speed =
                                         std::max(0.0, MAX_SPEED * (1.0 - fabs(angle / MAX_ANGLE * cte) / 4));
@@ -72,7 +72,7 @@ int main()
                                 target_speed = std::min(MAX_SPEED, target_speed);
                                 pid_throttle.UpdateError(speed - target_speed);
 
-                                throttle_value = std::min(MAX_THROTTLE, 0.7 + pid_throttle.Controller());
+                                throttle_value = std::min(MAX_THROTTLE, 0.7 + pid_throttle.GetController());
 
                                 // DEBUG
                                 std::cout << "CTE: " << cte << " Steering Value: " << steer_value

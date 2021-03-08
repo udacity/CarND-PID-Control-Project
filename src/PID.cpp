@@ -17,7 +17,7 @@ void PID::UpdateError(double cte)
     i_error += cte;
 }
 
-double PID::Controller()
+double PID::GetController()
 {
     double steer_value = -Kp * p_error - Kd * d_error - Ki * i_error;
     if (steer_value < -1)
