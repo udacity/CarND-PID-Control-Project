@@ -37,8 +37,9 @@ int main()
     uWS::Hub h;
 
     // PID controller for strering and throttle
-    PID pid_steer(0.135, 0.0015, 8.51561);
-    PID pid_throttle(0.6, 0, 1);
+    // Manual tuning
+    PID pid_steer(0.15, 0.007, 1.00001);
+    PID pid_throttle(0.9999, 0.00001, 1.001);
 
     h.onMessage([&pid_steer, &pid_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                                             uWS::OpCode opCode)
