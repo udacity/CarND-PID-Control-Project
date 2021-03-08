@@ -44,3 +44,8 @@ The **D** counteracts the P component's tendency to overshoot the target speed.
 
 ###### I - Integral
 The **I** was set to a small value(0.00009) since the target speed is constantly changing and I observed a tendency to not breaking fast enough
+
+
+#### Hyperparameter Tuning
+I choose the manual method to provide hyperparameter for PID controller. I tested a lot of parameters and found few interest paramters for differnt hardware specs.
+Those paramters can be found from [`steer_params.txt`](data/steer_params.txt) and [`throttle_params.txt`](data/throttle_params.txt) files.
