@@ -32,3 +32,15 @@ The **D** counteracts the P component's tendency to overshoot the center line. A
 ###### I - Integral
 The **I** counteracts a bias in the CTE which prevents the P-D controller from reaching the center line. This bias can take several forms, such as a steering drift.
 
+#### Throttle PID Controller
+Throttle PID controller was used to control the speed of the car via the throttle. The target speed is reduced if there in case of big CTE and high steering angle.
+
+
+###### P - Proportional
+The **P** is the most directly observable effect on the car's behaviour. High values of P resulted in quick reactions on changes of the target speed which even allowed the car to brake.
+
+###### D - Differential
+The **D** counteracts the P component's tendency to overshoot the target speed.
+
+###### I - Integral
+The **I** was set to a small value(0.00009) since the target speed is constantly changing and I observed a tendency to not breaking fast enough
