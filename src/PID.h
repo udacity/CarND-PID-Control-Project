@@ -26,7 +26,7 @@ public:
      * Calculate the total PID error.
      * @output The total PID error
      */
-    double Controller();
+    double GetController();
 
 
 private:
