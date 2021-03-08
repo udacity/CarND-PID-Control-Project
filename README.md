@@ -19,8 +19,9 @@ The streering PID controller analyzes the cross track error(CTE) provided by the
 * I - Intergral
 * D - Differential
 
-|<img src="data/pid-img.png" width="600" height="250" />|
-|-------------------------------------------------------------|
+|<img src="data/pid-img.png" width="500" height="250" />| <img src="data/pid.png" width="500" height="250" /> |
+|-------------------------------------------------------------|-----------------------------------------------|
+| Source: https://thinkautonomous.medium.com/ | Source: Udacity|
 
 
 ###### P - Proportional
