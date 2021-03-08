@@ -13,7 +13,7 @@ Project: PID Controller
 
 #### PID Controller
 
-|<img src="data/pid_controller.svg" width="600" height="75" />|
+|<img src="data/PID_en.svg.png" width="600" height="200" />|
 |-------------------------------------------------------------|
 
 
