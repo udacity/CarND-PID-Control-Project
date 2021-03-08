@@ -26,4 +26,6 @@ The streering PID controller analyzes the cross track error(CTE) provided by the
 
 ###### P - Proportional
 
-The **P** is the most directly observable effect on the car's behaviour. 
+The **P** is the most directly observable effect on the car's behaviour.It causes the car to steer propartionally to the car's distance from the lane center. Bigger values of P result in faster reactions of the steering angle with respect to the CTE.
+
+
