@@ -4,6 +4,9 @@
 #include <string>
 #include "json.hpp"
 #include "PID.h"
+#include "Tune.cpp"
+//#include "Tune.h"
+#include <vector>
 
 // for convenience
 using nlohmann::json;
@@ -34,40 +37,114 @@ int main() {
   uWS::Hub h;
 
   PID pid;
+  Tune tune;
   /**
    * TODO: Initialize the pid variable.
    */
-
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
+  bool do_tune = true;
+  double init_p_coeff = 0.05;
+  double init_i_coeff = 0.001;
+  double init_d_coeff = 1.4;
+  double steer_value;
+  double steering_change;
+  pid.Init(init_p_coeff, init_i_coeff, init_d_coeff);
+  tune.Init(init_p_coeff, init_i_coeff, init_d_coeff);
+ // double best_err = 1000000.0;
+ // double err;//////////////////////
+  int param_index = 0;
+  int step_count = 0;
+  bool dig_deeper = false;
+  
+  h.onMessage([&pid, &tune, &do_tune, & param_index, &step_count, &steer_value, &steering_change, &dig_deeper](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
+  
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
       auto s = hasData(string(data).substr(0, length));
-
+      
       if (s != "") {
         auto j = json::parse(s);
-
+        
         string event = j[0].get<string>();
 
         if (event == "telemetry") {
           // j[1] is the data JSON object
+	  
           double cte = std::stod(j[1]["cte"].get<string>());
           double speed = std::stod(j[1]["speed"].get<string>());
           double angle = std::stod(j[1]["steering_angle"].get<string>());
-          double steer_value;
+          //double steer_value;
+	  //double steering_change;
           /**
            * TODO: Calculate steering value here, remember the steering value is
            *   [-1, 1].
            * NOTE: Feel free to play around with the throttle and speed.
            *   Maybe use another PID controller to control the speed!
            */
+	  if (do_tune == false) {
+	    pid.UpdateError(cte);
+	    steering_change = pid.TotalError();
+	    steer_value = steering_change;  ////////////
+	  }
+
+	  if (do_tune == true) {
+	    double sum_dp = tune.dp[0]+tune.dp[1]+tune.dp[2];
+	    if (sum_dp > tune.threshold) { // do some more fine-tuning
+	      if (step_count > 100) { // sample size of next 100 points completed, now evaluate the results
+	        
+	        //tune.p[param_index] += tune.dp[param_index]; // adjust the parameter value in one direction
+	        
+		if ((tune.err < tune.best_err) && (!dig_deeper)) { // tune iteration improved results
+	          tune.best_err = tune.err;
+		  tune.dp[param_index] *= 1.1;  // make a greater increment of change in parameter
+	          tune.p[param_index] += tune.dp[param_index];
+	        }
+	        else { // tune iteration did not improve results
+	          tune.p[param_index] -= tune.dp[param_index]; //(2 * tune.dp[param_index]); // adjust the parameter value in the negative direction (undo the previous addition, too)
+	          dig_deeper = true;
+	          if (tune.err < tune.best_err) { // tune iteration changed from having not improved results to having improve results
+	            tune.best_err = tune.err;
+		    tune.dp[param_index] *= 1.05;
+	      	    tune.p[param_index] += tune.dp[param_index];
+		  }
+	          else { // tune iteration still not improving results
+	 	    tune.dp[param_index] *= 0.95;
+		    tune.p[param_index] += tune.dp[param_index];
+	          }
+	        }
+	        //tune.p[param_index] += tune.dp[param_index]; // adjust the parameter value in positive direction  
+	        
+		if (!dig_deeper) {
+	          param_index += 1;
+		}
+	        if (param_index > 2) { 
+		  param_index = 0;
+	        }
+	        step_count = 0;
+	        tune.ResetError();
+	      }
+	      // 99% of the time, do this:
+	      tune.UpdateError(cte);
+	      tune.err = tune.TotalError();
+	      steer_value = tune.err;
+              step_count += 1;
+	    }
+
+	    else { // it is fine-tuned enough
+	      do_tune = false;
+	      pid.Kp = tune.p[0];
+	      pid.Ki = tune.p[1];
+	      pid.Kd = tune.p[2];
+	      std::cout << "Ideal tune found: P = " << tune.p[0] << ", I = " << tune.p[1] << ", D = " << tune.p[2] << std::endl;
+	    }
+	    
+	  }
           
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
-                    << std::endl;
-
+          std::cout << "angle: " << angle << " CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+	  if (do_tune == true) { std::cout << "best err = " << tune.best_err << ", P = " << tune.p[0] << ", I = " << tune.p[1] << ", D = " << tune.p[2] << std::endl;}
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
@@ -82,7 +159,7 @@ int main() {
       }
     }  // end websocket message if
   }); // end h.onMessage
-
+  
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
     std::cout << "Connected!!!" << std::endl;
   });
