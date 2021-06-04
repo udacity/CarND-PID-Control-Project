@@ -17,14 +17,15 @@ class Tune {
   /**
    * PID Coefficients
    */ 
-  //double Kp;
-  //double Ki;
-  //double Kd;
+  
   std::vector<double> p;
   std::vector<double> dp;
   // For use in coordinate ascent
   double threshold;
   double best_err;
+  double best_P;
+  double best_I;
+  double best_D;
   double err;
   /**
    * Initialize Tune.

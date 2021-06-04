@@ -46,13 +46,6 @@ class PID {
   double i_error;
   double d_error;
 
-//  /**
-//   * PID Coefficients
-//   */ 
-//  double Kp;
-//  double Ki;
-//  double Kd;
-
   // For use in calculations
   double prev_cte;
 };

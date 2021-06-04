@@ -7,12 +7,8 @@ Tune::~Tune() {}
 void Tune::Init(double orig_p, double orig_i, double orig_d) {
   new_pid = {orig_p, orig_i, orig_d};
   delta_pid = {1.0, 1.0, 1.0};
-  tolerance = 0.2;
-  double best_err = 1000000.0;
-
-  //Kp = orig_p;
-  //Ki = orig_i;
-  //Kd = orig_d;
+  tolerance = 0.1;
+  
   p = {orig_p,orig_i,orig_d};
   dp = {orig_p/10.0, orig_i/10.0, orig_d/10.0};
   p_error = 0.0;
@@ -20,7 +16,11 @@ void Tune::Init(double orig_p, double orig_i, double orig_d) {
   d_error = 0.0;
   prev_cte = 0.0;
   threshold = 0.1;
-  best_err = 999999.0;
+  best_err = 9999.0;
+  best_P = 0;
+  best_I = 0;
+  best_D = 0;
+  err = 0.0;
 
 }
 
@@ -48,5 +48,6 @@ void Tune::ResetError() {
   i_error = 0.0;
   d_error = 0.0;
   prev_cte = 0.0;
+  err = 0.0;
   
 }

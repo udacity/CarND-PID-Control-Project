@@ -41,21 +41,20 @@ int main() {
   /**
    * TODO: Initialize the pid variable.
    */
-  bool do_tune = true;
-  double init_p_coeff = 0.05;
-  double init_i_coeff = 0.001;
-  double init_d_coeff = 1.4;
+  bool do_tune = false; //true;
+  double init_p_coeff = 0.06643; // 0.0653159; // 0.05;
+  double init_i_coeff = 0.00119783; // 0.00118822; //0.001;
+  double init_d_coeff = 1.36291; // 1.47583; //1.4;
   double steer_value;
   double steering_change;
   pid.Init(init_p_coeff, init_i_coeff, init_d_coeff);
   tune.Init(init_p_coeff, init_i_coeff, init_d_coeff);
- // double best_err = 1000000.0;
- // double err;//////////////////////
   int param_index = 0;
   int step_count = 0;
+  int tune_size = 1100;
   bool dig_deeper = false;
-  
-  h.onMessage([&pid, &tune, &do_tune, & param_index, &step_count, &steer_value, &steering_change, &dig_deeper](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
+    
+  h.onMessage([&pid, &tune, &do_tune, & param_index, &step_count, &steer_value, &steering_change, &dig_deeper, &tune_size](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -74,9 +73,8 @@ int main() {
 	  
           double cte = std::stod(j[1]["cte"].get<string>());
           double speed = std::stod(j[1]["speed"].get<string>());
-          double angle = std::stod(j[1]["steering_angle"].get<string>());
-          //double steer_value;
-	  //double steering_change;
+          double angle = std::stod(j[1]["steering_angle"].get<string>());  // in degrees
+          
           /**
            * TODO: Calculate steering value here, remember the steering value is
            *   [-1, 1].
@@ -86,38 +84,38 @@ int main() {
 	  if (do_tune == false) {
 	    pid.UpdateError(cte);
 	    steering_change = pid.TotalError();
-	    steer_value = steering_change;  ////////////
+	    steer_value = steering_change;
 	  }
 
 	  if (do_tune == true) {
 	    double sum_dp = tune.dp[0]+tune.dp[1]+tune.dp[2];
 	    if (sum_dp > tune.threshold) { // do some more fine-tuning
-	      if (step_count > 100) { // sample size of next 100 points completed, now evaluate the results
-	        
-	        //tune.p[param_index] += tune.dp[param_index]; // adjust the parameter value in one direction
-	        
-		if ((tune.err < tune.best_err) && (!dig_deeper)) { // tune iteration improved results
+	      if (step_count > tune_size) { // sample size of next `tune_size` points completed, now evaluate the results
+	        if ((tune.err < tune.best_err) && (!dig_deeper)) { // tune iteration improved results
 	          tune.best_err = tune.err;
+	  	  tune.best_P = tune.p[0];
+		  tune.best_I = tune.p[1];
+		  tune.best_D = tune.p[2];
 		  tune.dp[param_index] *= 1.1;  // make a greater increment of change in parameter
 	          tune.p[param_index] += tune.dp[param_index];
 	        }
 	        else { // tune iteration did not improve results
-	          tune.p[param_index] -= tune.dp[param_index]; //(2 * tune.dp[param_index]); // adjust the parameter value in the negative direction (undo the previous addition, too)
-	          dig_deeper = true;
+	          tune.p[param_index] -= tune.dp[param_index]; // adjust the parameter value in the negative direction 
+	          if (!dig_deeper) {dig_deeper = true;}
+	          else if (dig_deeper) {dig_deeper = false;}
 	          if (tune.err < tune.best_err) { // tune iteration changed from having not improved results to having improve results
 	            tune.best_err = tune.err;
 		    tune.dp[param_index] *= 1.05;
 	      	    tune.p[param_index] += tune.dp[param_index];
 		  }
 	          else { // tune iteration still not improving results
-	 	    tune.dp[param_index] *= 0.95;
+		    tune.dp[param_index] *= 0.95;
 		    tune.p[param_index] += tune.dp[param_index];
 	          }
 	        }
-	        //tune.p[param_index] += tune.dp[param_index]; // adjust the parameter value in positive direction  
-	        
+	        	        
 		if (!dig_deeper) {
-	          param_index += 1;
+		  param_index += 1;
 		}
 	        if (param_index > 2) { 
 		  param_index = 0;
@@ -125,10 +123,15 @@ int main() {
 	        step_count = 0;
 	        tune.ResetError();
 	      }
-	      // 99% of the time, do this:
+	      // most of the time, just do this:
 	      tune.UpdateError(cte);
-	      tune.err = tune.TotalError();
-	      steer_value = tune.err;
+	      
+	      steer_value = tune.TotalError();
+	      
+	      if (step_count > (tune_size/1000)) {
+	        tune.err += std::abs(cte);
+	      }
+	      //std::cout << "tune.err = " << tune.err << "step_count = " << step_count << std::endl;
               step_count += 1;
 	    }
 
@@ -137,19 +140,23 @@ int main() {
 	      pid.Kp = tune.p[0];
 	      pid.Ki = tune.p[1];
 	      pid.Kd = tune.p[2];
-	      std::cout << "Ideal tune found: P = " << tune.p[0] << ", I = " << tune.p[1] << ", D = " << tune.p[2] << std::endl;
+	      std::cout << "Ideal tune found: P = " << tune.best_P << ", I = " << tune.best_I << ", D = " << tune.best_D << std::endl;
 	    }
 	    
 	  }
           
           // DEBUG
-          std::cout << "angle: " << angle << " CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-	  if (do_tune == true) { std::cout << "best err = " << tune.best_err << ", P = " << tune.p[0] << ", I = " << tune.p[1] << ", D = " << tune.p[2] << std::endl;}
+	  //std::cout << std::endl;
+          //std::cout << "angle: " << angle << " CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+	  if (do_tune == true) { 
+	    std::cout << "Best results: best err = " << tune.best_err << ", P = " << tune.best_P << ", I = " << tune.best_I << ", D = " << tune.best_D << std::endl;
+	    std::cout << "Current settings: P = " << tune.p[0] << ", I = " << tune.p[1] << ", D = " << tune.p[2] << std::endl;
+	  }
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = 0.2;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }  // end "telemetry" if
       } else {
